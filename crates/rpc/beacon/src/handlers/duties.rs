@@ -2,13 +2,13 @@ use actix_web::{
     HttpResponse, Responder, get, post,
     web::{Data, Json, Path},
 };
-use ream_beacon_api_types::{
+use ream_api_types_beacon::{
     duties::{AttesterDuty, ProposerDuty},
     error::ApiError,
     id::ID,
     responses::DutiesResponse,
 };
-use ream_consensus_misc::{constants::SLOTS_PER_EPOCH, misc::compute_start_slot_at_epoch};
+use ream_consensus_misc::{constants::beacon::SLOTS_PER_EPOCH, misc::compute_start_slot_at_epoch};
 use ream_storage::db::ReamDB;
 
 use crate::handlers::state::get_state_from_id;

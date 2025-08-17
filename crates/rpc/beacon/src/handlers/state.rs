@@ -3,7 +3,7 @@ use actix_web::{
     web::{Data, Path, Query},
 };
 use alloy_primitives::B256;
-use ream_beacon_api_types::{
+use ream_api_types_beacon::{
     error::ApiError,
     id::ID,
     query::EpochQuery,
@@ -11,7 +11,8 @@ use ream_beacon_api_types::{
 };
 use ream_consensus_beacon::electra::beacon_state::BeaconState;
 use ream_consensus_misc::{
-    checkpoint::Checkpoint, constants::SYNC_COMMITTEE_SIZE, misc::compute_sync_committee_period,
+    checkpoint::Checkpoint, constants::beacon::SYNC_COMMITTEE_SIZE,
+    misc::compute_sync_committee_period,
 };
 use ream_storage::{
     db::ReamDB,

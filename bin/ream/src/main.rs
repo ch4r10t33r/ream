@@ -14,17 +14,28 @@ use ream::cli::{
     validator_node::ValidatorNodeConfig,
     voluntary_exit::VoluntaryExitConfig,
 };
-use ream_beacon_api_types::id::{ID, ValidatorID};
+use ream_api_types_beacon::id::{ID, ValidatorID};
+use ream_chain_lean::{
+    genesis as lean_genesis,
+    lean_chain::LeanChain,
+    service::{LeanChainService, LeanChainServiceMessage},
+};
 use ream_checkpoint_sync::initialize_db_from_checkpoint;
-use ream_consensus_misc::{constants::set_genesis_validator_root, misc::compute_epoch_at_slot};
+use ream_consensus_misc::{
+    constants::beacon::set_genesis_validator_root, misc::compute_epoch_at_slot,
+};
 use ream_executor::ReamExecutor;
 use ream_network_manager::service::NetworkManagerService;
 use ream_network_spec::networks::{
     beacon_network_spec, set_beacon_network_spec, set_lean_network_spec,
 };
 use ream_operation_pool::OperationPool;
-use ream_p2p::network::lean::NetworkService as LeanNetworkService;
+use ream_p2p::{
+    gossipsub::lean::configurations::LeanGossipsubConfig,
+    network::lean::{LeanNetworkConfig, LeanNetworkService},
+};
 use ream_rpc_beacon::{config::RpcServerConfig, start_server};
+use ream_rpc_lean::{config::LeanRpcServerConfig, start_lean_server};
 use ream_storage::{
     db::{ReamDB, reset_db},
     dir::setup_data_dir,
@@ -35,6 +46,7 @@ use ream_validator_beacon::{
     voluntary_exit::process_voluntary_exit,
 };
 use ream_validator_lean::service::ValidatorService as LeanValidatorService;
+use tokio::sync::{RwLock, mpsc};
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
@@ -90,27 +102,83 @@ fn main() {
 }
 
 /// Runs the lean node.
+///
+/// A lean node runs several services with different responsibilities.
+/// Refer to each service's documentation for more details.
+///
+/// A lean node has one shared state, `LeanChain` (wrapped with synchronization primitives), which
+/// is used by all services.
+///
+/// Besides the shared state, each service holds the channels to communicate with each other.
 pub async fn run_lean_node(config: LeanNodeConfig, executor: ReamExecutor) {
     info!("starting up lean node...");
 
-    set_lean_network_spec(config.network.clone());
+    set_lean_network_spec(config.network);
 
-    let network_service = LeanNetworkService::new().await;
-    let validator_service = LeanValidatorService::new().await;
+    // Initialize the lean chain with genesis block and state.
+    let (genesis_block, genesis_state) = lean_genesis::setup_genesis();
+    let lean_chain = Arc::new(RwLock::new(LeanChain::new(genesis_block, genesis_state)));
 
+    // Initialize the services that will run in the lean node.
+    let (chain_sender, chain_receiver) = mpsc::unbounded_channel::<LeanChainServiceMessage>();
+
+    // TODO 1: Load keystores from the config.
+    let chain_service =
+        LeanChainService::new(lean_chain.clone(), chain_receiver, chain_sender.clone()).await;
+
+    // Starts the network service by listening on the specified socket address and port.
+    let mut network_service = LeanNetworkService::new(
+        Arc::new(LeanNetworkConfig {
+            gossipsub_config: LeanGossipsubConfig::default(),
+            socket_address: config.socket_address,
+            socket_port: config.socket_port,
+        }),
+        lean_chain.clone(),
+        executor.clone(),
+    )
+    .await
+    .expect("Failed to create network service");
+
+    let validator_service =
+        LeanValidatorService::new(lean_chain.clone(), Vec::new(), chain_sender).await;
+
+    let server_config = LeanRpcServerConfig::new(
+        config.http_address,
+        config.http_port,
+        config.http_allow_origin,
+    );
+
+    // Start the services concurrently.
+    let chain_future = executor.spawn(async move {
+        if let Err(err) = chain_service.start().await {
+            panic!("Chain service exited with error: {err}");
+        }
+    });
     let network_future = executor.spawn(async move {
-        network_service.start().await;
+        if let Err(err) = network_service.start(config.bootnodes).await {
+            panic!("Network service exited with error: {err}");
+        }
     });
     let validator_future = executor.spawn(async move {
-        validator_service.start().await;
+        if let Err(err) = validator_service.start().await {
+            panic!("Validator service exited with error: {err}");
+        }
     });
+    let http_future =
+        executor.spawn(async move { start_lean_server(server_config, lean_chain).await });
 
     tokio::select! {
+        _ = chain_future => {
+            info!("Chain service has stopped unexpectedly");
+        }
         _ = network_future => {
             info!("Network service has stopped unexpectedly");
         }
         _ = validator_future => {
             info!("Validator service has stopped unexpectedly");
+        }
+        _ = http_future => {
+            info!("RPC service has stopped unexpectedly");
         }
     }
 }

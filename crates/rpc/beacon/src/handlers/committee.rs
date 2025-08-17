@@ -4,13 +4,13 @@ use actix_web::{
     HttpResponse, Responder, get,
     web::{Data, Path, Query},
 };
-use ream_beacon_api_types::{
+use ream_api_types_beacon::{
     error::ApiError,
     id::ID,
     query::{EpochQuery, IndexQuery, SlotQuery},
     responses::BeaconResponse,
 };
-use ream_consensus_misc::{constants::SLOTS_PER_EPOCH, misc::compute_start_slot_at_epoch};
+use ream_consensus_misc::{constants::beacon::SLOTS_PER_EPOCH, misc::compute_start_slot_at_epoch};
 use ream_storage::db::ReamDB;
 use serde::Serialize;
 

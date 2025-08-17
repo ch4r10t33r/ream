@@ -9,7 +9,7 @@ use std::{
 use alloy_primitives::Address;
 use anyhow::{anyhow, bail};
 use futures::future::try_join_all;
-use ream_beacon_api_types::{
+use ream_api_types_beacon::{
     block::{BroadcastValidation, ProduceBlockData},
     duties::{AttesterDuty, ProposerDuty, SyncCommitteeDuty},
     id::{ID, ValidatorID},
@@ -21,7 +21,9 @@ use ream_consensus_beacon::{
 };
 use ream_consensus_misc::{
     attestation_data::AttestationData,
-    constants::{DOMAIN_SYNC_COMMITTEE, INTERVALS_PER_SLOT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE},
+    constants::beacon::{
+        DOMAIN_SYNC_COMMITTEE, INTERVALS_PER_SLOT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE,
+    },
     misc::{compute_domain, compute_epoch_at_slot, compute_signing_root},
 };
 use ream_executor::ReamExecutor;

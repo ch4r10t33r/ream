@@ -1,39 +1,27 @@
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
-    io,
     num::{NonZeroU8, NonZeroUsize},
-    pin::Pin,
     sync::Arc,
     time::{Duration, Instant},
 };
 
 use anyhow::anyhow;
 use delay_map::{HashMapDelay, HashSetDelay};
-use discv5::{Enr, enr::CombinedPublicKey};
+use discv5::Enr;
 use libp2p::{
-    Multiaddr, PeerId, Swarm, SwarmBuilder, Transport,
+    Multiaddr, PeerId, Swarm, SwarmBuilder,
     connection_limits::{self, ConnectionLimits},
-    core::{
-        ConnectedPoint,
-        muxing::StreamMuxerBox,
-        transport::Boxed,
-        upgrade::{SelectUpgrade, Version},
-    },
-    dns::Transport as DnsTransport,
+    core::ConnectedPoint,
     futures::StreamExt,
     gossipsub::{Event as GossipsubEvent, IdentTopic as Topic, Message, MessageAuthenticity},
     identify,
     multiaddr::Protocol,
-    noise::Config as NoiseConfig,
     swarm::{self, ConnectionId, NetworkBehaviour, SwarmEvent},
-    tcp::{Config as TcpConfig, tokio::Transport as TcpTransport},
-    yamux,
 };
-use libp2p_identity::{Keypair, PublicKey, secp256k1, secp256k1::PublicKey as Secp256k1PublicKey};
-use libp2p_mplex::{MaxBufferBehaviour, MplexConfig};
+use libp2p_identity::{Keypair, PublicKey, secp256k1};
 use parking_lot::{Mutex, RwLock};
-use ream_consensus_misc::constants::genesis_validators_root;
+use ream_consensus_misc::constants::beacon::genesis_validators_root;
 use ream_discv5::discovery::{Discovery, DiscoveryOutEvent, QueryType};
 use ream_executor::ReamExecutor;
 use ream_network_spec::networks::beacon_network_spec;
@@ -42,13 +30,13 @@ use tokio::{
     time::interval,
 };
 use tracing::{error, info, trace, warn};
-use yamux::Config as YamuxConfig;
 
 use crate::{
     channel::{P2PCallbackResponse, P2PMessage, P2PRequest, P2PResponse},
     config::NetworkConfig,
     constants::{PING_INTERVAL_DURATION, TARGET_PEER_COUNT},
-    gossipsub::{GossipsubBehaviour, snappy::SnappyTransform, topics::GossipTopic},
+    gossipsub::{GossipsubBehaviour, beacon::topics::GossipTopic, snappy::SnappyTransform},
+    network::misc::{Executor, build_transport, peer_id_from_enr},
     network_state::NetworkState,
     peer::{CachedPeer, ConnectionState, Direction},
     req_resp::{
@@ -99,14 +87,6 @@ pub enum ReamNetworkEvent {
     GossipsubMessage {
         message: Message,
     },
-}
-
-struct Executor(ReamExecutor);
-
-impl libp2p::swarm::Executor for Executor {
-    fn exec(&self, f: Pin<Box<dyn futures::Future<Output = ()> + Send>>) {
-        self.0.spawn(f);
-    }
 }
 
 pub struct Network {
@@ -296,19 +276,6 @@ impl Network {
         self.network_state.peer_table.read().get(id).cloned()
     }
 
-    pub fn peer_id_from_enr(enr: &Enr) -> Option<PeerId> {
-        match enr.public_key() {
-            CombinedPublicKey::Secp256k1(public_key) => {
-                let encoded_public_key = public_key.to_encoded_point(true);
-                let public_key = Secp256k1PublicKey::try_from_bytes(encoded_public_key.as_bytes())
-                    .ok()?
-                    .into();
-                Some(PeerId::from_public_key(&public_key))
-            }
-            _ => None,
-        }
-    }
-
     /// Starts monitoring for network events. The network worker awaits for different types
     /// of network events:
     /// - A swarm event
@@ -456,6 +423,7 @@ impl Network {
                     Direction::Outbound,
                     None,
                 );
+                self.peers_to_ping.remove(&peer_id);
                 None
             }
             // We only handle this for incoming connections
@@ -479,10 +447,24 @@ impl Network {
                         self.network_state.meta_data.read().seq_number,
                     ));
                     self.send_request(peer_id, ping_message);
-                    self.peers_to_ping.insert(peer_id);
                 }
 
                 None
+            }
+            SwarmEvent::ConnectionClosed {
+                peer_id,
+                num_established,
+                ..
+            } => {
+                if num_established == 0 {
+                    self.network_state
+                        .update_peer_state(peer_id, ConnectionState::Disconnected);
+                    self.peers_to_ping.remove(&peer_id);
+                    trace!("Peer {peer_id} connection closed. Removed from peers_to_ping.");
+                    Some(ReamNetworkEvent::PeerDisconnected(peer_id))
+                } else {
+                    None
+                }
             }
             SwarmEvent::Behaviour(behaviour_event) => match behaviour_event {
                 ReamBehaviourEvent::Identify(_) => None,
@@ -545,7 +527,7 @@ impl Network {
                 continue;
             }
 
-            if let Some(peer_id) = Network::peer_id_from_enr(&enr) {
+            if let Some(peer_id) = peer_id_from_enr(&enr) {
                 self.network_state.upsert_peer(
                     peer_id,
                     None,
@@ -553,7 +535,6 @@ impl Network {
                     Direction::Outbound,
                     Some(enr.clone()),
                 );
-                self.peers_to_ping.insert_at(peer_id, Duration::ZERO);
             }
         }
     }
@@ -764,6 +745,7 @@ impl Network {
                         cached_peer.state = ConnectionState::Connected;
                         cached_peer.status = Some(status);
                     });
+                self.peers_to_ping.insert(peer_id);
             }
         }
     }
@@ -809,26 +791,6 @@ impl Network {
     }
 }
 
-pub fn build_transport(local_private_key: Keypair) -> io::Result<Boxed<(PeerId, StreamMuxerBox)>> {
-    // mplex config
-    let mut mplex_config = MplexConfig::new();
-    mplex_config.set_max_buffer_size(256);
-    mplex_config.set_max_buffer_behaviour(MaxBufferBehaviour::Block);
-
-    let yamux_config = YamuxConfig::default();
-
-    let tcp = TcpTransport::new(TcpConfig::default().nodelay(true))
-        .upgrade(Version::V1)
-        .authenticate(NoiseConfig::new(&local_private_key).expect("Noise disabled"))
-        .multiplex(SelectUpgrade::new(yamux_config, mplex_config))
-        .timeout(Duration::from_secs(10));
-    let transport = tcp.boxed();
-
-    let transport = DnsTransport::system(transport)?.boxed();
-
-    Ok(transport)
-}
-
 #[cfg(test)]
 mod tests {
     use std::net::IpAddr;
@@ -848,7 +810,7 @@ mod tests {
     use super::*;
     use crate::{
         config::NetworkConfig,
-        gossipsub::{configurations::GossipsubConfig, topics::GossipTopicKind},
+        gossipsub::beacon::{configurations::GossipsubConfig, topics::GossipTopicKind},
     };
 
     async fn create_network(
@@ -911,7 +873,7 @@ mod tests {
         let enr = Enr::builder().build(&enr_key).unwrap();
 
         let expected = PeerId::from_public_key(&libp2p_keypair.public());
-        let actual = Network::peer_id_from_enr(&enr).expect("peer id");
+        let actual = peer_id_from_enr(&enr).expect("peer id");
 
         assert_eq!(expected, actual);
     }
@@ -1015,8 +977,8 @@ mod tests {
         let mut network_1 = runtime
             .block_on(create_network(
                 "127.0.0.1".parse::<IpAddr>().unwrap(),
-                9000,
-                9001,
+                9090,
+                9091,
                 vec![],
                 true,
                 gossip_topics.clone(),
@@ -1026,8 +988,8 @@ mod tests {
         let mut network_2 = runtime
             .block_on(create_network(
                 "127.0.0.1".parse::<IpAddr>().unwrap(),
-                9002,
-                9003,
+                9092,
+                9093,
                 vec![network_1_enr],
                 false,
                 gossip_topics.clone(),

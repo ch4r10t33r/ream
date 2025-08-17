@@ -4,7 +4,7 @@ use actix_web::{
     HttpResponse, Responder, get, post,
     web::{Data, Json, Path, Query},
 };
-use ream_beacon_api_types::{
+use ream_api_types_beacon::{
     error::ApiError,
     id::{ID, ValidatorID},
     query::{AttestationQuery, IdQuery, StatusQuery},
@@ -15,7 +15,7 @@ use ream_beacon_api_types::{
 use ream_bls::PublicKey;
 use ream_consensus_beacon::electra::beacon_state::BeaconState;
 use ream_consensus_misc::{
-    attestation_data::AttestationData, constants::SLOTS_PER_EPOCH, validator::Validator,
+    attestation_data::AttestationData, constants::beacon::SLOTS_PER_EPOCH, validator::Validator,
 };
 use ream_fork_choice::store::Store;
 use ream_operation_pool::OperationPool;
