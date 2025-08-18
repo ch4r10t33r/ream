@@ -1,5 +1,5 @@
 use anyhow::Result;
-use rand::thread_rng;
+use rand::rng;
 use tracing::info;
 
 // Custom signature scheme with lifetime 2^8
@@ -56,7 +56,7 @@ pub fn generate_keys_with_default_config() -> Result<(Vec<u8>, Vec<u8>), Box<dyn
 {
     use custom_lifetime_8::CustomSIGWinternitzLifetime8W8;
     use hashsig::signature::SignatureScheme;
-    let mut rng = thread_rng();
+    let mut rng = rng();
 
     // Generate keys with default configuration:
     // - Poseidon winternitz signature type

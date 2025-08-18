@@ -9,7 +9,7 @@ use crate::checkpoint::Checkpoint;
 
 pub struct SignedVote {
     pub data: Vote,
-    pub signature: PQSignature,
+    // pub signature: PQSignature,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Encode, Decode, TreeHash)]

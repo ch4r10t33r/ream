@@ -61,6 +61,7 @@ version = "0.1.0"
 actix-web = "4.10.2"
 actix-web-lab = "0.24.1"
 aes = "0.8.4"
+aes-gcm = "0.10"
 alloy-consensus = { version = "1.0", default-features = false }
 alloy-primitives = { version = "1.1", features = ['serde'] }
 alloy-rlp = { version = "0.3.8", default-features = false, features = ["derive"] }
@@ -68,6 +69,8 @@ alloy-rpc-types-beacon = "1.0.8"
 alloy-rpc-types-eth = "1.0.7"
 anyhow = "1.0"
 async-trait = "0.1.86"
+argon2 = "0.5"
+base64 = "0.21"
 bincode = "2.0.1"
 bip39 = "2.0"
 clap = "4"
@@ -82,7 +85,7 @@ ethereum_ssz_derive = "0.9"
 eventsource-client = "0.15.0"
 futures = "0.3"
 hashbrown = "0.15.3"
-hashsig = { git = "https://github.com/b-wagn/hash-sig" }
+hashsig = { git = "https://github.com/b-wagn/hash-sig.git" }
 hmac = "0.12.1"
 itertools = "0.14"
 jsonwebtoken = "9.3.1"
@@ -116,6 +119,7 @@ tree_hash = "0.10"
 tree_hash_derive = "0.10"
 unicode-normalization = "0.1.24"
 url = "2.5"
+hex = "0.4"
 
 # ream dependencies
 ream-account-manager = { path = "crates/account_manager" }
