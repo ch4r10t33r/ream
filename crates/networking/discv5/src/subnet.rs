@@ -231,7 +231,6 @@ mod tests {
         Enr,
         enr::{CombinedKey, k256::ecdsa::SigningKey},
     };
-    use rand::rng;
 
     use super::*;
 
@@ -281,7 +280,7 @@ mod tests {
 
     #[test]
     fn test_encode_decode_subnet_fields() {
-        let secret_key = SigningKey::random(&mut rng());
+        let secret_key = SigningKey::random(&mut rand::thread_rng());
         let combined_key = CombinedKey::from(secret_key);
 
         let mut attestation_subnets = AttestationSubnets::new();
@@ -355,7 +354,7 @@ mod tests {
 
     #[test]
     fn test_new_subnet_types() {
-        let secret_key = SigningKey::random(&mut rng());
+        let secret_key = SigningKey::random(&mut rand::thread_rng());
         let combined_key = CombinedKey::from(secret_key);
 
         let mut attestation_subnets = AttestationSubnets::new();
@@ -453,7 +452,7 @@ mod tests {
 
     #[test]
     fn test_subnet_predicates() {
-        let secret_key = SigningKey::random(&mut rng());
+        let secret_key = SigningKey::random(&mut rand::thread_rng());
         let combined_key = CombinedKey::from(secret_key);
 
         let mut attestation_subnets = AttestationSubnets::new();

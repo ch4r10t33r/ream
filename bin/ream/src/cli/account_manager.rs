@@ -1,7 +1,6 @@
 use anyhow::ensure;
 use bip39::Mnemonic;
 use clap::Parser;
-use rand::rngs::OsRng;
 use tracing::warn;
 
 const MIN_CHUNK_SIZE: u64 = 4;

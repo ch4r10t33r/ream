@@ -173,6 +173,8 @@ impl XmssWrapper {
         Ok(())
     }
 
+    #[allow(unused_mut)]
+    #[allow(clippy::unnecessary_mut_passed)]
     /// Sign a message using the stored secret key
     ///
     /// **IMPORTANT**: This function updates the secret key state after signing.
@@ -282,7 +284,7 @@ impl XmssWrapper {
         let public_key_bytes = Self::load_public_key(&public_key_path)?;
 
         // Verify based on tree height
-        let is_valid = match signature.tree_height {
+        let result: Result<bool, XmssWrapperError> = match signature.tree_height {
             18 => {
                 // Use the Winternitz encoding with chunk size w = 1 for height 18
                 use instantiations_poseidon::lifetime_2_to_the_18::winternitz::SIGWinternitzLifetime18W8;
@@ -313,9 +315,12 @@ impl XmssWrapper {
                 message_array[..message_len].copy_from_slice(&message[..message_len]);
 
                 // Use the SignatureScheme::verify method
-                let is_valid =
-                    SIGWinternitzLifetime18W8::verify(&public_key, 0, &message_array, &sig);
-                is_valid
+                Ok(SIGWinternitzLifetime18W8::verify(
+                    &public_key,
+                    0,
+                    &message_array,
+                    &sig,
+                ))
             }
             _ => {
                 return Err(XmssWrapperError::InvalidTreeHeight(format!(
@@ -325,7 +330,7 @@ impl XmssWrapper {
             }
         };
 
-        Ok(is_valid)
+        result
     }
 
     /// Save a signature to a JSON file
@@ -413,7 +418,7 @@ impl XmssWrapper {
         // Return the public key
         Ok(key_pair.public_key.clone())
     }
-
+    #[allow(clippy::needless_borrows_for_generic_args)]
     fn save_encrypted_secret_key(
         key_pair: &KeyPair,
         password: &str,

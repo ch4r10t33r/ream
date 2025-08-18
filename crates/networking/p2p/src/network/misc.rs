@@ -15,6 +15,7 @@ use libp2p::{
     yamux,
 };
 use libp2p_identity::{Keypair, PeerId, secp256k1::PublicKey as Secp256k1PublicKey};
+#[allow(deprecated)]
 use libp2p_mplex::{MaxBufferBehaviour, MplexConfig};
 use ream_executor::ReamExecutor;
 use yamux::Config as YamuxConfig;
@@ -26,7 +27,7 @@ impl libp2p::swarm::Executor for Executor {
         self.0.spawn(f);
     }
 }
-
+#[allow(deprecated)]
 pub fn build_transport(local_private_key: Keypair) -> io::Result<Boxed<(PeerId, StreamMuxerBox)>> {
     // mplex config
     let mut mplex_config = MplexConfig::new();
