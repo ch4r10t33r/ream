@@ -333,7 +333,10 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
     );
 
     let seed_phrase = config.get_seed_phrase();
-    ream_account_manager::generate_keys(&seed_phrase);
+    let _ = ream_account_manager::generate_and_save_keys(
+        config.lifetime.try_into().unwrap(),
+        &seed_phrase,
+    );
 
     info!("Account manager completed successfully");
 }

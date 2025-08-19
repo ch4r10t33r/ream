@@ -1,78 +1,354 @@
+use std::{
+    fs::File,
+    io::{Read, Write},
+    path::Path,
+};
+
+use aes_gcm::{
+    Aes256Gcm, Key, Nonce,
+    aead::{Aead, KeyInit},
+};
 use anyhow::Result;
-use rand::rng;
-use tracing::info;
+use argon2::{Algorithm, Argon2, Params, Version};
+use base64::{self, Engine};
+use hmac::{Hmac, Mac};
+use rand::{Rng, rng};
+use serde::{Deserialize, Serialize};
+use sha2::Sha256;
 
-// Custom signature scheme with lifetime 2^8
-// THIS SHOULD BE USED ONLY FOR TESTING PURPOSES
-pub mod custom_lifetime_8 {
-    use hashsig::{
-        inc_encoding::basic_winternitz::WinternitzEncoding,
-        signature::generalized_xmss::GeneralizedXMSSSignatureScheme,
-        symmetric::{
-            message_hash::poseidon::PoseidonMessageHash, prf::shake_to_field::ShakePRFtoF,
-            tweak_hash::poseidon::PoseidonTweakHash,
-        },
-    };
+type HmacSha256 = Hmac<Sha256>;
 
-    // Configuration constants for lifetime 2^8
-    const LOG_LIFETIME: usize = 8;
-    const PARAMETER_LEN: usize = 5;
-    const MSG_HASH_LEN_FE: usize = 5;
-    const HASH_LEN_FE: usize = 7;
-    const MSG_LEN_FE: usize = 9;
-    const TWEAK_LEN_FE: usize = 2;
-    const RAND_LEN: usize = 5;
-    const CAPACITY: usize = 9;
+// Re-export the KeyPair and XmssSignature from the pqc crate
+pub use ream_pqc::keystore::{KeyPair, XmssSignature};
 
-    // Winternitz encoding parameters for chunk size 8
-    const CHUNK_SIZE_W8: usize = 8;
-    const BASE_W8: usize = 256;
-    const NUM_CHUNKS_W8: usize = 20;
-    const NUM_CHUNKS_CHECKSUM_W8: usize = 2;
-
-    // Type definitions
-    type MHw8 = PoseidonMessageHash<
-        PARAMETER_LEN,
-        RAND_LEN,
-        MSG_HASH_LEN_FE,
-        NUM_CHUNKS_W8,
-        BASE_W8,
-        TWEAK_LEN_FE,
-        MSG_LEN_FE,
-    >;
-    type THw8 =
-        PoseidonTweakHash<PARAMETER_LEN, HASH_LEN_FE, TWEAK_LEN_FE, CAPACITY, NUM_CHUNKS_W8>;
-    type PRFw8 = ShakePRFtoF<HASH_LEN_FE>;
-    type IEw8 = WinternitzEncoding<MHw8, CHUNK_SIZE_W8, NUM_CHUNKS_CHECKSUM_W8>;
-
-    /// Custom instantiation with Lifetime 2^8, Winternitz encoding, chunk size w = 8
-    pub type CustomSIGWinternitzLifetime8W8 =
-        GeneralizedXMSSSignatureScheme<PRFw8, IEw8, THw8, LOG_LIFETIME>;
+#[derive(Serialize, Deserialize)]
+struct EncryptedSecretKey {
+    encrypted_data: String, // Base64 encoded encrypted JSON
+    nonce: String,          // Base64 encoded nonce
+    hmac: String,           // HMAC for authentication
+    salt: String,           // Salt for key derivation
+    tree_height: u32,
+    max_signatures: u64,
+    key_type: String,
+    hash_function: String,
 }
 
-/// Generates public and secret keys with default configuration and returns them in serialized
-/// format
-pub fn generate_keys_with_default_config() -> Result<(Vec<u8>, Vec<u8>), Box<dyn std::error::Error>>
-{
-    use custom_lifetime_8::CustomSIGWinternitzLifetime8W8;
-    use hashsig::signature::SignatureScheme;
+/// Error enum for account manager operations
+#[derive(Debug, thiserror::Error)]
+pub enum AccountManagerError {
+    #[error("File I/O error: {0}")]
+    FileIO(#[from] std::io::Error),
+    #[error("Serialization error: {0}")]
+    Serialization(String),
+    #[error("Encryption error: {0}")]
+    Encryption(String),
+    #[error("Decryption error: {0}")]
+    Decryption(String),
+    #[error("Authentication error: {0}")]
+    Authentication(String),
+}
+
+/// Generate and save XMSS key pair with encryption
+pub fn generate_and_save_keys(height: u32, password: &str) -> Result<(), AccountManagerError> {
+    use ream_pqc::keystore::XmssWrapper;
+
     let mut rng = rng();
 
-    // Generate keys with default configuration:
-    // - Poseidon winternitz signature type
-    // - Chunk size of 8
-    // - Lifetime of 2^8
-    let (public_key, secret_key) =
-        <CustomSIGWinternitzLifetime8W8 as SignatureScheme>::key_gen(&mut rng, 0, 256);
+    // Generate keys using the pqc crate
+    let key_pair = XmssWrapper::generate_keys(height, &mut rng)
+        .map_err(|e| AccountManagerError::Serialization(e.to_string()))?;
 
-    // Serialize keys using serde_json instead of bincode for now
-    let public_key_serialized = serde_json::to_vec(&public_key)?;
-    let secret_key_serialized = serde_json::to_vec(&secret_key)?;
+    // Save keys
+    save_secret_key(&key_pair, password)?;
 
-    Ok((public_key_serialized, secret_key_serialized))
+    println!("Poseidon2-XMSS key pair generated and saved successfully!");
+    println!("Public key saved to: xmss_public_key.json");
+    println!("Secret key saved to: xmss_secret_key.json (encrypted)");
+    println!(
+        "Tree height: {} (2^{} = {} signatures)",
+        height,
+        height,
+        1u64 << height
+    );
+
+    Ok(())
 }
 
-pub fn generate_keys(seed_phrase: &str) {
-    // TODO: Implement this
-    info!("Generating keys with seed phrase: {}", seed_phrase);
+/// Save encrypted secret key and public key
+fn save_secret_key(key_pair: &KeyPair, password: &str) -> Result<(), AccountManagerError> {
+    // Save public key file (unencrypted)
+    let public_key_data = serde_json::json!({
+        "public_key": hex::encode(&key_pair.public_key),
+        "tree_height": key_pair.lifetime,
+        "max_signatures": 1u64 << key_pair.lifetime,
+        "key_type": "XMSS_PUBLIC",
+        "hash_function": "Poseidon2"
+    });
+
+    let public_json_string = serde_json::to_string_pretty(&public_key_data)
+        .map_err(|e| AccountManagerError::Serialization(e.to_string()))?;
+
+    let mut public_file = File::create("xmss_public_key.json")?;
+    public_file.write_all(public_json_string.as_bytes())?;
+
+    // Encrypt and save secret key file
+    save_encrypted_secret_key(key_pair, password)?;
+
+    Ok(())
+}
+
+/// Save encrypted secret key with AES-GCM encryption and HMAC authentication
+fn save_encrypted_secret_key(
+    key_pair: &KeyPair,
+    password: &str,
+) -> Result<(), AccountManagerError> {
+    // Generate salt for key derivation (Argon2 requires 16+ bytes)
+    let mut salt = [0u8; 32];
+    rng().fill(&mut salt);
+
+    // Derive encryption key from password using Argon2id
+    let derived_key = derive_key_from_password(password, &salt)?;
+
+    // Create the secret key JSON data
+    let secret_key_data = serde_json::json!({
+        "secret_key": hex::encode(&key_pair.secret_key),
+        "warning": "This is an encrypted secret key. Keep the password secure!"
+    });
+
+    let secret_json_string = serde_json::to_string(&secret_key_data)
+        .map_err(|e| AccountManagerError::Serialization(e.to_string()))?;
+
+    // Generate random nonce for AES-GCM
+    let mut nonce_bytes = [0u8; 12];
+    rng().fill(&mut nonce_bytes);
+    let nonce = Nonce::from_slice(&nonce_bytes);
+
+    // Encrypt the JSON data
+    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&derived_key));
+    let encrypted_data = cipher
+        .encrypt(nonce, secret_json_string.as_bytes())
+        .map_err(|e| {
+            AccountManagerError::Encryption(format!("AES-GCM encryption failed: {}", e))
+        })?;
+
+    // Create HMAC for authentication
+    let hmac_value = create_hmac(&derived_key, &encrypted_data, &nonce_bytes, &salt)?;
+
+    // Create the encrypted secret key structure
+    let encrypted_secret = EncryptedSecretKey {
+        encrypted_data: base64::engine::general_purpose::STANDARD.encode(&encrypted_data),
+        nonce: base64::engine::general_purpose::STANDARD.encode(nonce_bytes),
+        hmac: hex::encode(&hmac_value),
+        salt: hex::encode(salt),
+        tree_height: key_pair.lifetime,
+        max_signatures: 1u64 << key_pair.lifetime,
+        key_type: "XMSS_SECRET_ENCRYPTED".to_string(),
+        hash_function: "Poseidon2".to_string(),
+    };
+
+    // Save encrypted secret key to file
+    let encrypted_json = serde_json::to_string_pretty(&encrypted_secret)
+        .map_err(|e| AccountManagerError::Serialization(e.to_string()))?;
+
+    let mut secret_file = File::create("xmss_secret_key.json")?;
+    secret_file.write_all(encrypted_json.as_bytes())?;
+
+    Ok(())
+}
+
+/// Derive encryption key from password using Argon2id
+fn derive_key_from_password(password: &str, salt: &[u8]) -> Result<[u8; 32], AccountManagerError> {
+    // Configure Argon2id with strong parameters
+    let params = Params::new(
+        19456,    // memory cost (19 MiB)
+        2,        // time cost (iterations)
+        1,        // parallelism
+        Some(32), // output length
+    )
+    .map_err(|e| AccountManagerError::Encryption(format!("Argon2 params error: {}", e)))?;
+
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+
+    let mut key = [0u8; 32];
+    argon2
+        .hash_password_into(password.as_bytes(), salt, &mut key)
+        .map_err(|e| {
+            AccountManagerError::Encryption(format!("Argon2 key derivation failed: {}", e))
+        })?;
+
+    Ok(key)
+}
+
+/// Create HMAC for authentication
+fn create_hmac(
+    key: &[u8],
+    encrypted_data: &[u8],
+    nonce: &[u8],
+    salt: &[u8],
+) -> Result<Vec<u8>, AccountManagerError> {
+    let mut mac = <HmacSha256 as Mac>::new_from_slice(key)
+        .map_err(|e| AccountManagerError::Authentication(format!("HMAC key error: {}", e)))?;
+
+    mac.update(encrypted_data);
+    mac.update(nonce);
+    mac.update(salt);
+
+    Ok(mac.finalize().into_bytes().to_vec())
+}
+
+/// Verify HMAC for authentication
+fn verify_hmac(
+    key: &[u8],
+    encrypted_data: &[u8],
+    nonce: &[u8],
+    salt: &[u8],
+    expected_hmac: &[u8],
+) -> Result<(), AccountManagerError> {
+    let mut mac = <HmacSha256 as Mac>::new_from_slice(key)
+        .map_err(|e| AccountManagerError::Authentication(format!("HMAC key error: {}", e)))?;
+
+    mac.update(encrypted_data);
+    mac.update(nonce);
+    mac.update(salt);
+
+    mac.verify_slice(expected_hmac)
+        .map_err(|_| AccountManagerError::Authentication("HMAC verification failed".to_string()))?;
+
+    Ok(())
+}
+
+/// Load public key from file
+pub fn load_public_key<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, AccountManagerError> {
+    let content = std::fs::read_to_string(path)?;
+    let data: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| AccountManagerError::Serialization(e.to_string()))?;
+
+    let hex_key = data["public_key"].as_str().ok_or_else(|| {
+        AccountManagerError::Serialization("Invalid public key format".to_string())
+    })?;
+
+    hex::decode(hex_key).map_err(|e| AccountManagerError::Serialization(e.to_string()))
+}
+
+/// Load secret key from encrypted file
+pub fn load_secret_key<P: AsRef<Path>>(
+    path: P,
+    password: &str,
+) -> Result<Vec<u8>, AccountManagerError> {
+    // Read encrypted file
+    let mut file = File::open(path)?;
+    let mut content = String::new();
+    file.read_to_string(&mut content)?;
+
+    // Parse encrypted structure
+    let encrypted_secret: EncryptedSecretKey = serde_json::from_str(&content)
+        .map_err(|e| AccountManagerError::Serialization(e.to_string()))?;
+
+    // Decode components
+    let encrypted_data = base64::engine::general_purpose::STANDARD
+        .decode(&encrypted_secret.encrypted_data)
+        .map_err(|e| {
+            AccountManagerError::Decryption(format!("Failed to decode encrypted data: {}", e))
+        })?;
+    let nonce_bytes = base64::engine::general_purpose::STANDARD
+        .decode(&encrypted_secret.nonce)
+        .map_err(|e| AccountManagerError::Decryption(format!("Failed to decode nonce: {}", e)))?;
+    let expected_hmac = hex::decode(&encrypted_secret.hmac)
+        .map_err(|e| AccountManagerError::Authentication(format!("HMAC decode error: {}", e)))?;
+    let salt = hex::decode(&encrypted_secret.salt)
+        .map_err(|e| AccountManagerError::Decryption(format!("Salt decode error: {}", e)))?;
+
+    // Derive key from password using Argon2id
+    let derived_key = derive_key_from_password(password, &salt)?;
+
+    // Verify HMAC
+    verify_hmac(
+        &derived_key,
+        &encrypted_data,
+        &nonce_bytes,
+        &salt,
+        &expected_hmac,
+    )?;
+
+    // Decrypt data
+    let nonce = Nonce::from_slice(&nonce_bytes);
+    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&derived_key));
+    let decrypted_data = cipher
+        .decrypt(nonce, encrypted_data.as_ref())
+        .map_err(|e| {
+            AccountManagerError::Decryption(format!("AES-GCM decryption failed: {}", e))
+        })?;
+
+    // Parse decrypted JSON
+    let decrypted_json: serde_json::Value = serde_json::from_slice(&decrypted_data)
+        .map_err(|e| AccountManagerError::Serialization(e.to_string()))?;
+
+    let hex_key = decrypted_json["secret_key"].as_str().ok_or_else(|| {
+        AccountManagerError::Serialization("Invalid secret key format".to_string())
+    })?;
+
+    hex::decode(hex_key).map_err(|e| AccountManagerError::Serialization(e.to_string()))
+}
+
+/// Sign a message using stored secret key
+pub fn sign_message(
+    message: &[u8],
+    secret_key_path: &Path,
+    password: &str,
+) -> Result<XmssSignature, AccountManagerError> {
+    use ream_pqc::keystore::XmssWrapper;
+
+    let mut rng = rng();
+
+    // Load the secret key
+    let secret_key_bytes = load_secret_key(secret_key_path, password)?;
+
+    // Get tree height from the secret key file metadata
+    let tree_height = get_tree_height_from_file(secret_key_path)?;
+
+    // Sign the message
+    let (signature, updated_secret_key_bytes) =
+        XmssWrapper::sign_message(message, &secret_key_bytes, tree_height, &mut rng)
+            .map_err(|e| AccountManagerError::Serialization(e.to_string()))?;
+
+    // Update the secret key file with the new state
+    let updated_keypair = KeyPair {
+        public_key: vec![], // We don't need the public key for saving secret key
+        secret_key: updated_secret_key_bytes,
+        lifetime: tree_height,
+    };
+
+    save_encrypted_secret_key(&updated_keypair, password)?;
+
+    Ok(signature)
+}
+
+/// Verify a signature against a message using stored public key
+pub fn verify_signature(
+    message: &[u8],
+    signature: &XmssSignature,
+    public_key_path: &Path,
+) -> Result<bool, AccountManagerError> {
+    use ream_pqc::keystore::XmssWrapper;
+
+    // Load the public key
+    let public_key_bytes = load_public_key(public_key_path)?;
+
+    // Verify the signature
+    let is_valid = XmssWrapper::verify_signature(message, signature, &public_key_bytes)
+        .map_err(|e| AccountManagerError::Serialization(e.to_string()))?;
+
+    Ok(is_valid)
+}
+
+/// Helper function to get tree height from secret key file
+fn get_tree_height_from_file<P: AsRef<Path>>(path: P) -> Result<u32, AccountManagerError> {
+    let mut file = File::open(path)?;
+    let mut content = String::new();
+    file.read_to_string(&mut content)?;
+
+    let encrypted_secret: EncryptedSecretKey = serde_json::from_str(&content)
+        .map_err(|e| AccountManagerError::Serialization(e.to_string()))?;
+
+    Ok(encrypted_secret.tree_height)
 }
