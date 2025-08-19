@@ -21,11 +21,8 @@ bip39.workspace = true
 clap = { workspace = true, features = ["derive", "env"] }
 discv5.workspace = true
 hashbrown.workspace = true
-<<<<<<< HEAD
-hmac = "0.12.1"
-=======
+hmac.workspace = true
 prometheus_exporter.workspace = true
->>>>>>> master
 rand.workspace = true
 rand_core.workspace = true
 tokio.workspace = true

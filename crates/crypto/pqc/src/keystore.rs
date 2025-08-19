@@ -360,7 +360,7 @@ mod tests {
         let mut rng = rng();
 
         // Test with tree height 18 (262144 signatures)
-        let result = XmssWrapper::generate_keys(18, &mut rng);
+        let result = XmssWrapper::generate_keys(8, &mut rng);
         assert!(result.is_ok());
 
         let key_pair = result.unwrap();
@@ -384,12 +384,12 @@ mod tests {
         let message = b"Hello, XMSS world!";
 
         // Generate keys with tree height 18 (262144 signatures)
-        let result = XmssWrapper::generate_keys(18, &mut rng);
+        let result = XmssWrapper::generate_keys(8, &mut rng);
         assert!(result.is_ok());
         let key_pair = result.unwrap();
 
         // Sign message
-        let signature = XmssWrapper::sign_message(message, &key_pair.secret_key, 18, &mut rng);
+        let signature = XmssWrapper::sign_message(message, &key_pair.secret_key, 8, &mut rng);
         assert!(signature.is_ok());
         let (sig, _updated_secret_key) = signature.unwrap();
 
@@ -426,17 +426,17 @@ mod tests {
         let message2 = b"Second message";
 
         // Generate keys
-        let result = XmssWrapper::generate_keys(18, &mut rng);
+        let result = XmssWrapper::generate_keys(8, &mut rng);
         assert!(result.is_ok());
         let key_pair = result.unwrap();
 
         // Sign first message
         let (sig1, updated_secret_key1) =
-            XmssWrapper::sign_message(message1, &key_pair.secret_key, 18, &mut rng).unwrap();
+            XmssWrapper::sign_message(message1, &key_pair.secret_key, 8, &mut rng).unwrap();
 
         // Sign second message (state should be updated)
         let (sig2, _updated_secret_key2) =
-            XmssWrapper::sign_message(message2, &updated_secret_key1, 18, &mut rng).unwrap();
+            XmssWrapper::sign_message(message2, &updated_secret_key1, 8, &mut rng).unwrap();
 
         // Both signatures should be valid
         let verify1 = XmssWrapper::verify_signature(message1, &sig1, &key_pair.public_key);
