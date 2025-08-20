@@ -308,7 +308,7 @@ pub fn sign_message(
 
     // Sign the message
     let (signature, updated_secret_key_bytes) =
-        XmssWrapper::sign_message(message, &secret_key_bytes, tree_height, &mut rng)
+        XmssWrapper::sign_message(message, &secret_key_bytes, tree_height, &mut rng, 0)
             .map_err(|e| AccountManagerError::Serialization(e.to_string()))?;
 
     // Update the secret key file with the new state
@@ -335,7 +335,7 @@ pub fn verify_signature(
     let public_key_bytes = load_public_key(public_key_path)?;
 
     // Verify the signature
-    let is_valid = XmssWrapper::verify_signature(message, signature, &public_key_bytes)
+    let is_valid = XmssWrapper::verify_signature(message, signature, &public_key_bytes, 0)
         .map_err(|e| AccountManagerError::Serialization(e.to_string()))?;
 
     Ok(is_valid)
