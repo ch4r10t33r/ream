@@ -23,4 +23,3 @@ ream-consensus-lean.workspace = true
 ream-consensus-misc.workspace = true
 ream-metrics.workspace = true
 ream-network-spec.workspace = true
-ream-pqc.workspace = true

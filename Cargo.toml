@@ -157,3 +157,6 @@ ream-storage = { path = "crates/storage" }
 ream-syncer = { path = "crates/networking/syncer" }
 ream-validator-beacon = { path = "crates/common/validator/beacon" }
 ream-validator-lean = { path = "crates/common/validator/lean" }
+
+[patch.crates-io]
+ethereum_hashing = { git = "https://github.com/ReamLabs/ethereum_hashing.git" }

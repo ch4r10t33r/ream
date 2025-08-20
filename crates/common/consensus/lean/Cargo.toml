@@ -24,4 +24,3 @@ tree_hash_derive.workspace = true
 # Local dependencies
 ream-consensus-misc.workspace = true
 ream-metrics.workspace = true
-ream-pqc.workspace = true
