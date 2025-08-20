@@ -153,7 +153,7 @@ impl XmssWrapper {
         epoch: u32,
     ) -> Result<(XmssSignature, Vec<u8>), XmssWrapperError> {
         // TODO: Implement proper signature index tracking
-        
+
         let secret_key_bytes_vec = secret_key_bytes.to_vec();
 
         // Reconstruct the secret key object and sign based on tree height
