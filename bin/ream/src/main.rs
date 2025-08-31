@@ -1,6 +1,5 @@
 use std::{
-    env,
-    fs,
+    env, fs,
     net::SocketAddr,
     path::Path,
     process,
@@ -9,6 +8,7 @@ use std::{
 };
 
 use clap::Parser;
+use rayon::prelude::*;
 use ream::cli::{
     Cli, Commands,
     account_manager::AccountManagerConfig,
@@ -18,6 +18,7 @@ use ream::cli::{
     validator_node::ValidatorNodeConfig,
     voluntary_exit::VoluntaryExitConfig,
 };
+use ream_account_manager::message_types::MessageType;
 use ream_api_types_beacon::id::{ID, ValidatorID};
 use ream_chain_lean::{
     genesis as lean_genesis, lean_chain::LeanChain, messages::LeanChainServiceMessage,
@@ -55,9 +56,24 @@ use ream_validator_beacon::{
 use ream_validator_lean::{
     registry::load_validator_registry, service::ValidatorService as LeanValidatorService,
 };
+use serde::{Deserialize, Serialize};
 use tokio::{sync::mpsc, time::Instant};
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
+use uuid::Uuid;
+
+// Keystore structure for storing generated keys
+#[derive(Serialize, Deserialize, Debug)]
+struct KeystoreFile {
+    version: u32,
+    id: String,
+    description: String,
+    seed_phrase: String,
+    activation_epoch: usize,
+    num_active_epochs: usize,
+    public_key: String,
+    created: String,
+}
 
 pub const APP_NAME: &str = "ream";
 
@@ -382,13 +398,51 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
 
     let seed_phrase = config.get_seed_phrase();
 
+    // Create keystore directory if it doesn't exist
+    let default_path = "./.keystore/".to_string();
+    let keystore_path = config.path.as_ref().unwrap_or(&default_path);
+    let keystore_dir = Path::new(keystore_path);
+    if !keystore_dir.exists() {
+        fs::create_dir_all(keystore_dir).expect("Failed to create keystore directory");
+        info!("Created keystore directory: {:?}", keystore_dir);
+    }
+
     // Measure key generation time
     let start_time = Instant::now();
-    let (_public_key, _private_key) = ream_account_manager::generate_keys(
-        &seed_phrase,
-        config.activation_epoch,
-        config.num_active_epochs,
-    );
+
+    // Parallelize key generation for each message type
+    let message_types: Vec<MessageType> = MessageType::iter().collect();
+
+    message_types.par_iter().for_each(|&message_type| {
+        let (_public_key, _private_key) = ream_account_manager::generate_keys(
+            &seed_phrase,
+            config.activation_epoch,
+            config.num_active_epochs,
+        );
+
+        // Create keystore file
+        let keystore = KeystoreFile {
+            version: 1,
+            id: Uuid::new_v4().to_string(),
+            description: format!("Ream validator keystore for {:?}", message_type),
+            seed_phrase: seed_phrase.clone(),
+            activation_epoch: config.activation_epoch,
+            num_active_epochs: config.num_active_epochs,
+            public_key: "Public key generated successfully".to_string(),
+            created: chrono::Utc::now().to_rfc3339(),
+        };
+
+        // Write keystore to file with enum name
+        let filename = format!("{:?}.json", message_type);
+        let keystore_file_path = keystore_dir.join(filename);
+        let keystore_json =
+            serde_json::to_string_pretty(&keystore).expect("Failed to serialize keystore");
+
+        fs::write(&keystore_file_path, keystore_json).expect("Failed to write keystore file");
+
+        info!("Keystore written to: {:?}", keystore_file_path);
+        // info!("Public key for {:?}: {:?}", message_type, public_key.inner.to_string());
+    });
     let duration = start_time.elapsed();
     info!("Key generation complete, took {:?}", duration);
 

@@ -33,6 +33,14 @@ pub struct AccountManagerConfig {
     /// Number of active epochs
     #[arg(long, default_value_t = DEFAULT_NUM_ACTIVE_EPOCHS)]
     pub num_active_epochs: usize,
+
+    /// Path for keystore file
+    #[arg(long, default_value = "./.keystore/")]
+    pub path: Option<String>,
+
+    /// Import existing keystore
+    #[arg(long)]
+    pub import_keystore: Option<String>,
 }
 
 impl Default for AccountManagerConfig {
@@ -44,6 +52,8 @@ impl Default for AccountManagerConfig {
             seed_phrase: None,
             activation_epoch: DEFAULT_ACTIVATION_EPOCH,
             num_active_epochs: DEFAULT_NUM_ACTIVE_EPOCHS,
+            path: Some("./.keystore/".to_string()),
+            import_keystore: None,
         }
     }
 }

@@ -9,7 +9,7 @@ impl MessageType {
     pub const fn all() -> [MessageType; 2] {
         [MessageType::Attestation, MessageType::Blocks]
     }
-    
+
     // Iterator method to loop through all variants
     pub fn iter() -> impl Iterator<Item = MessageType> + 'static {
         Self::all().into_iter()
