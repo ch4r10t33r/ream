@@ -1,5 +1,7 @@
 use anyhow::ensure;
+use bip39::Mnemonic;
 use clap::Parser;
+use tracing::info;
 
 const MIN_CHUNK_SIZE: u64 = 4;
 const MIN_LIFETIME: u64 = 18;
@@ -67,7 +69,12 @@ impl AccountManagerConfig {
         if let Some(phrase) = &self.seed_phrase {
             phrase.clone()
         } else {
-            "default_seed_phrase".to_string()
+            // Generate a new BIP39 mnemonic with 24 words (256 bits of entropy)
+            let entropy: [u8; 32] = rand::random();
+            let mnemonic = Mnemonic::from_entropy_in(bip39::Language::English, &entropy).unwrap();
+            let phrase = mnemonic.words().collect::<Vec<_>>().join(" ");
+            info!("Generated new seed phrase (KEEP SAFELY): {}", phrase);
+            phrase
         }
     }
 }
