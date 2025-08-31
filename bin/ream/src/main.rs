@@ -413,36 +413,40 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
     // Parallelize key generation for each message type
     let message_types: Vec<MessageType> = MessageType::iter().collect();
 
-    message_types.par_iter().for_each(|&message_type| {
-        let (_public_key, _private_key) = ream_account_manager::generate_keys(
-            &seed_phrase,
-            config.activation_epoch,
-            config.num_active_epochs,
-        );
+    message_types
+        .par_iter()
+        .enumerate()
+        .for_each(|(index, &message_type)| {
+            let (_public_key, _private_key) = ream_account_manager::generate_keys(
+                &seed_phrase,
+                index as u32,
+                config.activation_epoch,
+                config.num_active_epochs,
+            );
 
-        // Create keystore file
-        let keystore = KeystoreFile {
-            version: 1,
-            id: Uuid::new_v4().to_string(),
-            description: format!("Ream validator keystore for {:?}", message_type),
-            seed_phrase: seed_phrase.clone(),
-            activation_epoch: config.activation_epoch,
-            num_active_epochs: config.num_active_epochs,
-            public_key: "Public key generated successfully".to_string(),
-            created: chrono::Utc::now().to_rfc3339(),
-        };
+            // Create keystore file
+            let keystore = KeystoreFile {
+                version: 1,
+                id: Uuid::new_v4().to_string(),
+                description: format!("Ream validator keystore for {:?}", message_type),
+                seed_phrase: seed_phrase.clone(),
+                activation_epoch: config.activation_epoch,
+                num_active_epochs: config.num_active_epochs,
+                public_key: "Public key generated successfully".to_string(),
+                created: chrono::Utc::now().to_rfc3339(),
+            };
 
-        // Write keystore to file with enum name
-        let filename = format!("{:?}.json", message_type);
-        let keystore_file_path = keystore_dir.join(filename);
-        let keystore_json =
-            serde_json::to_string_pretty(&keystore).expect("Failed to serialize keystore");
+            // Write keystore to file with enum name
+            let filename = format!("{:?}.json", message_type);
+            let keystore_file_path = keystore_dir.join(filename);
+            let keystore_json =
+                serde_json::to_string_pretty(&keystore).expect("Failed to serialize keystore");
 
-        fs::write(&keystore_file_path, keystore_json).expect("Failed to write keystore file");
+            fs::write(&keystore_file_path, keystore_json).expect("Failed to write keystore file");
 
-        info!("Keystore written to: {:?}", keystore_file_path);
-        // info!("Public key for {:?}: {:?}", message_type, public_key.inner.to_string());
-    });
+            info!("Keystore written to: {:?}", keystore_file_path);
+            // info!("Public key for {:?}: {:?}", message_type, public_key.inner.to_string());
+        });
     let duration = start_time.elapsed();
     info!("Key generation complete, took {:?}", duration);
 

@@ -72,6 +72,13 @@ impl AccountManagerConfig {
             self.lifetime >= MIN_LIFETIME,
             "Lifetime must be at least {MIN_LIFETIME}"
         );
+
+        // Ensure that if import-keystore is provided, seed-phrase is not provided
+        ensure!(
+            !(self.import_keystore.is_some() && self.seed_phrase.is_some()),
+            "Cannot provide both --seed-phrase and --import-keystore. Use one or the other."
+        );
+
         Ok(())
     }
 

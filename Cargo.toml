@@ -86,6 +86,7 @@ eventsource-client = "0.15.0"
 futures = "0.3"
 hashbrown = "0.15.3"
 hashsig = { git = "https://github.com/b-wagn/hash-sig", rev = "287517a763edba7e518b0c1ee5beb868f26f1f66" }
+hex = "0.4"
 itertools = "0.14"
 jsonwebtoken = "9.3.1"
 kzg = { git = "https://github.com/grandinetech/rust-kzg" }
@@ -103,10 +104,12 @@ redb = { version = "2.4.0" }
 reqwest = { version = "0.12", features = ["json"] }
 rstest = "0.25"
 rust-kzg-blst = { git = 'https://github.com/grandinetech/rust-kzg.git' }
+secp256k1 = "0.28"
 serde = { version = '1.0', features = ['derive', "rc"] }
 serde_json = "1.0.139"
 serde_yaml = "0.9"
 sha2 = "0.10"
+sha3 = "0.10.8"
 snap = "1.1"
 ssz_types = { git = "https://github.com/ReamLabs/ssz_types", branch = "removable-variable-list" }
 tempdir = "0.3.7"

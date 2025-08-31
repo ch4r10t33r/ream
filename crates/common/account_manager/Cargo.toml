@@ -10,11 +10,16 @@ rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
+bip32.workspace = true
+bip39.workspace = true
 hashsig.workspace = true
+hex.workspace = true
 rand.workspace = true
 rand_chacha.workspace = true
+secp256k1.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+sha3.workspace = true
 tracing.workspace = true
 
 # ream dependencies
