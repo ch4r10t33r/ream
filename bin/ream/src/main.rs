@@ -18,7 +18,7 @@ use ream::cli::{
     validator_node::ValidatorNodeConfig,
     voluntary_exit::VoluntaryExitConfig,
 };
-use ream_account_manager::message_types::MessageType;
+use ream_account_manager::{keystore::QsKeystore, message_types::MessageType};
 use ream_api_types_beacon::id::{ID, ValidatorID};
 use ream_chain_lean::{
     genesis as lean_genesis, lean_chain::LeanChain, messages::LeanChainServiceMessage,
@@ -56,24 +56,9 @@ use ream_validator_beacon::{
 use ream_validator_lean::{
     registry::load_validator_registry, service::ValidatorService as LeanValidatorService,
 };
-use serde::{Deserialize, Serialize};
 use tokio::{sync::mpsc, time::Instant};
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
-use uuid::Uuid;
-
-// Keystore structure for storing generated keys
-#[derive(Serialize, Deserialize, Debug)]
-struct KeystoreFile {
-    version: u32,
-    id: String,
-    description: String,
-    seed_phrase: String,
-    activation_epoch: usize,
-    num_active_epochs: usize,
-    public_key: String,
-    created: String,
-}
 
 pub const APP_NAME: &str = "ream";
 
@@ -439,23 +424,19 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
                 config.num_active_epochs,
             );
 
-            // Create keystore file
-            let keystore = KeystoreFile {
-                version: 1,
-                id: Uuid::new_v4().to_string(),
-                description: format!("Ream validator keystore for {:?}", message_type),
-                seed_phrase: seed_phrase.clone(),
-                activation_epoch: config.activation_epoch,
-                num_active_epochs: config.num_active_epochs,
-                public_key: "Public key generated successfully".to_string(),
-                created: chrono::Utc::now().to_rfc3339(),
-            };
+            // Create keystore file using QsKeystore
+            let keystore = QsKeystore::from_seed_phrase(
+                &seed_phrase,
+                config.lifetime as u32,
+                config.activation_epoch as u32,
+                Some(format!("Ream validator keystore for {:?}", message_type)),
+                Some(format!("m/44'/60'/0'/0/{}", index)),
+            );
 
             // Write keystore to file with enum name
             let filename = format!("{:?}.json", message_type);
             let keystore_file_path = keystore_dir.join(filename);
-            let keystore_json =
-                serde_json::to_string_pretty(&keystore).expect("Failed to serialize keystore");
+            let keystore_json = keystore.to_json().expect("Failed to serialize keystore");
 
             fs::write(&keystore_file_path, keystore_json).expect("Failed to write keystore file");
 

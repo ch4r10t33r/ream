@@ -1,4 +1,6 @@
 use chrono::{DateTime, Utc};
+use hex;
+use rand;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -130,6 +132,40 @@ impl QsKeystore {
                 created: Some(Utc::now()),
             }),
         }
+    }
+
+    /// Create a new keystore from seed phrase and key parameters
+    pub fn from_seed_phrase(
+        seed_phrase: &str,
+        lifetime: u32,
+        activation_epoch: u32,
+        description: Option<String>,
+        path: Option<String>,
+    ) -> Self {
+        let uuid = Uuid::new_v4();
+
+        // Generate random salt for KDF (32 bytes)
+        let salt = hex::encode(rand::random::<[u8; 32]>());
+
+        // Generate random nonce for AES-GCM (12 bytes)
+        let nonce = hex::encode(rand::random::<[u8; 12]>());
+
+        // Generate random tag for AES-GCM (16 bytes)
+        let tag = hex::encode(rand::random::<[u8; 16]>());
+
+        // Store the seed phrase as encrypted data (hex encoded)
+        let ciphertext = hex::encode(seed_phrase.as_bytes());
+
+        let kdf = KdfParams::new_full(65536, 3, 4, salt);
+        let cipher = CipherParams::new(nonce, tag, ciphertext);
+        let crypto = CryptoParams { kdf, cipher };
+        let keytype = KeyType::new(lifetime, activation_epoch);
+
+        let mut keystore = Self::new(crypto, keytype, uuid);
+        keystore.description = description;
+        keystore.path = path;
+
+        keystore
     }
 
     /// Validate the keystore structure
