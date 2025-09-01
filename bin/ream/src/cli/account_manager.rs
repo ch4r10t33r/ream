@@ -90,7 +90,13 @@ impl AccountManagerConfig {
             let entropy: [u8; 32] = rand::random();
             let mnemonic = Mnemonic::from_entropy_in(bip39::Language::English, &entropy).unwrap();
             let phrase = mnemonic.words().collect::<Vec<_>>().join(" ");
-            info!("Generated new seed phrase (KEEP SAFELY): {}", phrase);
+            info!(
+                "========================================================================================="
+            );
+            info!("Generated new seed phrase (KEEP SAFE): {}", phrase);
+            info!(
+                "========================================================================================="
+            );
             phrase
         }
     }

@@ -7,6 +7,7 @@ use ream_post_quantum_crypto::hashsig::{private_key::PrivateKey, public_key::Pub
 use sha2::{Digest, Sha256};
 use tracing::info;
 
+pub mod keystore;
 pub mod message_types;
 
 pub fn generate_keys(
