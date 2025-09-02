@@ -15,6 +15,7 @@ pub fn generate_keys(
     wallet_index: u32,
     activation_epoch: usize,
     num_active_epochs: usize,
+    passphrase: &str,
 ) -> (PublicKey, PrivateKey) {
     info!(
         "Generating lean consensus validator keys for index {} with activation_epoch={activation_epoch}, num_active_epochs={num_active_epochs}.....",
@@ -24,8 +25,8 @@ pub fn generate_keys(
     // Parse the mnemonic phrase
     let mnemonic = Mnemonic::from_str(seed_phrase).expect("Invalid mnemonic phrase");
 
-    // Generate seed from mnemonic (with empty passphrase)
-    let seed = mnemonic.to_seed("");
+    // Generate seed from mnemonic using provided passphrase
+    let seed = mnemonic.to_seed(passphrase);
 
     // Create a deterministic seed based on the original seed and wallet index
     let mut hasher = Sha256::new();

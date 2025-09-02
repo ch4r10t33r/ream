@@ -26,6 +26,10 @@ pub struct AccountManagerConfig {
     #[arg(short, long)]
     pub seed_phrase: Option<String>,
 
+    /// Optional BIP39 passphrase used with the seed phrase
+    #[arg(long)]
+    pub passphrase: Option<String>,
+
     /// Activation epoch for the validator
     #[arg(long, default_value_t = DEFAULT_ACTIVATION_EPOCH)]
     pub activation_epoch: usize,
@@ -50,6 +54,7 @@ impl Default for AccountManagerConfig {
             lifetime: 18,
             chunk_size: 5,
             seed_phrase: None,
+            passphrase: None,
             activation_epoch: DEFAULT_ACTIVATION_EPOCH,
             num_active_epochs: DEFAULT_NUM_ACTIVE_EPOCHS,
             path: Some("./.keystore/".to_string()),

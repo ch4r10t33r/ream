@@ -422,6 +422,7 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
                 index as u32,
                 config.activation_epoch,
                 config.num_active_epochs,
+                config.passphrase.as_deref().unwrap_or(""),
             );
 
             // Create keystore file using QsKeystore
