@@ -9,6 +9,7 @@ use tracing::info;
 
 pub mod keystore;
 pub mod message_types;
+pub mod utils;
 
 pub fn generate_keys(
     seed_phrase: &str,
@@ -18,8 +19,7 @@ pub fn generate_keys(
     passphrase: &str,
 ) -> (PublicKey, PrivateKey) {
     info!(
-        "Generating lean consensus validator keys for index {} with activation_epoch={activation_epoch}, num_active_epochs={num_active_epochs}.....",
-        wallet_index
+        "Generating lean consensus validator keys for index {wallet_index} with activation_epoch={activation_epoch}, num_active_epochs={num_active_epochs}....."
     );
 
     // Parse the mnemonic phrase
@@ -43,8 +43,8 @@ pub fn generate_keys(
 
     // Display public key contents
     match serde_json::to_string_pretty(&public_key.inner) {
-        Ok(json) => info!("Public key contents: {}", json),
-        Err(_) => info!("Public key generated successfully (could not serialize)"),
+        Ok(json) => info!("Public key contents: {json}"),
+        Err(e) => info!("Public key generated successfully (could not serialize) due to {e}"),
     }
 
     (public_key, private_key)

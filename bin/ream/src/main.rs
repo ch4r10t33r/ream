@@ -8,8 +8,8 @@ use std::{
 };
 
 use clap::Parser;
-use rayon::prelude::*;
 use libp2p_identity::Keypair;
+use rayon::prelude::*;
 use ream::cli::{
     Cli, Commands,
     account_manager::AccountManagerConfig,
@@ -20,8 +20,7 @@ use ream::cli::{
     validator_node::ValidatorNodeConfig,
     voluntary_exit::VoluntaryExitConfig,
 };
-use ream_account_manager::{keystore::QsKeystore, message_types::MessageType};
-use ream_api_types_beacon::id::{ID, ValidatorID};
+use ream_account_manager::{keystore::Keystore, message_types::MessageType};
 use ream_api_types_beacon::id::ValidatorID;
 use ream_api_types_common::id::ID;
 use ream_chain_lean::{
@@ -423,7 +422,7 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
     let keystore_dir = Path::new(keystore_path);
     if !keystore_dir.exists() {
         fs::create_dir_all(keystore_dir).expect("Failed to create keystore directory");
-        info!("Created keystore directory: {:?}", keystore_dir);
+        info!("Created keystore directory: {default_path}");
     }
 
     // Measure key generation time
@@ -444,13 +443,13 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
                 config.passphrase.as_deref().unwrap_or(""),
             );
 
-            // Create keystore file using QsKeystore
-            let keystore = QsKeystore::from_seed_phrase(
+            // Create keystore file using Keystore
+            let keystore = Keystore::from_seed_phrase(
                 &seed_phrase,
                 config.lifetime as u32,
                 config.activation_epoch as u32,
                 Some(format!("Ream validator keystore for {:?}", message_type)),
-                Some(format!("m/44'/60'/0'/0/{}", index)),
+                Some(format!("m/44'/60'/0'/0/{index}")),
             );
 
             // Write keystore to file with enum name
@@ -460,8 +459,7 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
 
             fs::write(&keystore_file_path, keystore_json).expect("Failed to write keystore file");
 
-            info!("Keystore written to: {:?}", keystore_file_path);
-            // info!("Public key for {:?}: {:?}", message_type, public_key.inner.to_string());
+            info!("Keystore written to path: {default_path}");
         });
     let duration = start_time.elapsed();
     info!("Key generation complete, took {:?}", duration);

@@ -23,7 +23,7 @@ pub struct AccountManagerConfig {
     pub chunk_size: u64,
 
     /// Seed phrase for key generation
-    #[arg(short, long)]
+    #[arg(short, long, conflicts_with = "import_keystore")]
     pub seed_phrase: Option<String>,
 
     /// Optional BIP39 passphrase used with the seed phrase
@@ -43,7 +43,7 @@ pub struct AccountManagerConfig {
     pub path: Option<String>,
 
     /// Import existing keystore
-    #[arg(long)]
+    #[arg(long, conflicts_with = "seed_phrase")]
     pub import_keystore: Option<String>,
 }
 
@@ -78,11 +78,6 @@ impl AccountManagerConfig {
             "Lifetime must be at least {MIN_LIFETIME}"
         );
 
-        // Ensure that if import-keystore is provided, seed-phrase is not provided
-        ensure!(
-            !(self.import_keystore.is_some() && self.seed_phrase.is_some()),
-            "Cannot provide both --seed-phrase and --import-keystore. Use one or the other."
-        );
 
         Ok(())
     }
@@ -93,12 +88,12 @@ impl AccountManagerConfig {
         } else {
             // Generate a new BIP39 mnemonic with 24 words (256 bits of entropy)
             let entropy: [u8; 32] = rand::random();
-            let mnemonic = Mnemonic::from_entropy_in(bip39::Language::English, &entropy).unwrap();
+            let mnemonic = Mnemonic::from_entropy(&entropy).expect("Failed to generate mnemonic");
             let phrase = mnemonic.words().collect::<Vec<_>>().join(" ");
             info!(
                 "========================================================================================="
             );
-            info!("Generated new seed phrase (KEEP SAFE): {}", phrase);
+            info!("Generated new seed phrase (KEEP SAFE): {phrase}");
             info!(
                 "========================================================================================="
             );

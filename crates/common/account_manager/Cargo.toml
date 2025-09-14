@@ -10,6 +10,7 @@ rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
+anyhow.workspace = true
 bip39.workspace = true
 chrono.workspace = true
 hashsig.workspace = true

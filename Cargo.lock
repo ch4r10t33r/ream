@@ -5263,6 +5263,7 @@ dependencies = [
 name = "ream-account-manager"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bip39",
  "chrono",
  "hashsig",

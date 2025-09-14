@@ -1,11 +1,24 @@
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use hex;
 use rand;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::utils::validate_hex_string;
+
+// Cryptographic algorithm constants
+/// Key derivation function used for password-based key derivation
+pub const KDF_FUNCTION: &str = "argon2id";
+
+/// Symmetric encryption cipher used for encrypting the private key
+pub const CIPHER_FUNCTION: &str = "aes-256-gcm";
+
+/// Post-quantum signature scheme used for key generation and signing
+pub const KEYTYPE_FUNCTION: &str = "xmss-poisedon2-ots-seed";
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct QsKeystore {
+pub struct Keystore {
     /// Version number, must be 5
     pub version: u32,
 
@@ -117,7 +130,7 @@ pub struct KeystoreMeta {
     pub created: Option<DateTime<Utc>>,
 }
 
-impl QsKeystore {
+impl Keystore {
     /// Create a new quantum-secure keystore
     pub fn new(crypto: CryptoParams, keytype: KeyType, uuid: Uuid) -> Self {
         Self {
@@ -169,54 +182,45 @@ impl QsKeystore {
     }
 
     /// Validate the keystore structure
-    pub fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<()> {
         // Check version
         if self.version != 5 {
-            return Err("Version must be 5".to_string());
+            return Err(anyhow!("Version must be 5"));
         }
 
         // Check quantum_secure flag
         if !self.quantum_secure {
-            return Err("quantum_secure must be true".to_string());
+            return Err(anyhow!("quantum_secure must be true"));
         }
 
         // Check KDF function
-        if self.crypto.kdf.function != "argon2id" {
-            return Err("KDF function must be argon2id".to_string());
+        if self.crypto.kdf.function != KDF_FUNCTION {
+            return Err(anyhow!("KDF function must be {}", KDF_FUNCTION));
         }
 
         // Check cipher function
-        if self.crypto.cipher.function != "aes-256-gcm" {
-            return Err("Cipher function must be aes-256-gcm".to_string());
+        if self.crypto.cipher.function != CIPHER_FUNCTION {
+            return Err(anyhow!("Cipher function must be {}", CIPHER_FUNCTION));
         }
 
         // Check keytype function
-        if self.keytype.function != "xmss-poisedon2-ots-seed" {
-            return Err("Keytype function must be xmss-poisedon2-ots-seed".to_string());
+        if self.keytype.function != KEYTYPE_FUNCTION {
+            return Err(anyhow!("Keytype function must be {}", KEYTYPE_FUNCTION));
         }
 
         // Validate hex strings
-        self.validate_hex_string(&self.crypto.cipher.ciphertext, "ciphertext")?;
-        self.validate_hex_string(&self.crypto.cipher.params.nonce, "nonce")?;
-        self.validate_hex_string(&self.crypto.cipher.params.tag, "tag")?;
+        validate_hex_string(&self.crypto.cipher.ciphertext, "ciphertext")?;
+        validate_hex_string(&self.crypto.cipher.params.nonce, "nonce")?;
+        validate_hex_string(&self.crypto.cipher.params.tag, "tag")?;
 
         // Validate salt
         match &self.crypto.kdf.params {
             KdfParamsInner::Full { salt, .. } | KdfParamsInner::Short { salt, .. } => {
-                self.validate_hex_string(salt, "salt")?;
+                validate_hex_string(salt, "salt")?;
             }
         }
 
         Ok(())
-    }
-
-    /// Helper to validate hex strings
-    fn validate_hex_string(&self, hex_str: &str, field_name: &str) -> Result<(), String> {
-        if hex_str.chars().all(|c| c.is_ascii_hexdigit()) {
-            Ok(())
-        } else {
-            Err(format!("{} must be a valid hex string", field_name))
-        }
     }
 
     /// Convert to JSON string
@@ -234,7 +238,7 @@ impl KdfParams {
     /// Create new Argon2id KDF parameters (full names)
     pub fn new_full(memory: u32, iterations: u32, parallelism: u32, salt: String) -> Self {
         Self {
-            function: "argon2id".to_string(),
+            function: KDF_FUNCTION.to_string(),
             params: KdfParamsInner::Full {
                 memory,
                 iterations,
@@ -247,7 +251,7 @@ impl KdfParams {
     /// Create new Argon2id KDF parameters (short names)
     pub fn new_short(m: u32, t: u32, p: u32, salt: String) -> Self {
         Self {
-            function: "argon2id".to_string(),
+            function: KDF_FUNCTION.to_string(),
             params: KdfParamsInner::Short { m, t, p, salt },
         }
     }
@@ -257,7 +261,7 @@ impl CipherParams {
     /// Create new AES-256-GCM cipher parameters
     pub fn new(nonce: String, tag: String, ciphertext: String) -> Self {
         Self {
-            function: "aes-256-gcm".to_string(),
+            function: CIPHER_FUNCTION.to_string(),
             params: CipherParamsInner { nonce, tag },
             ciphertext,
         }
@@ -268,7 +272,7 @@ impl KeyType {
     /// Create new XMSS-Poseidon2 OTS seed key type
     pub fn new(lifetime: u32, activation_epoch: u32) -> Self {
         Self {
-            function: "xmss-poisedon2-ots-seed".to_string(),
+            function: KEYTYPE_FUNCTION.to_string(),
             params: KeyTypeParams {
                 lifetime,
                 activation_epoch,
@@ -297,7 +301,7 @@ mod tests {
 
         let keytype = KeyType::new(262144, 0);
 
-        let keystore = QsKeystore::new(crypto, keytype, uuid);
+        let keystore = Keystore::new(crypto, keytype, uuid);
 
         assert_eq!(keystore.version, 5);
         assert!(keystore.quantum_secure);
@@ -316,10 +320,10 @@ mod tests {
         let crypto = CryptoParams { kdf, cipher };
         let keytype = KeyType::new(262144, 0);
 
-        let keystore = QsKeystore::new(crypto, keytype, uuid);
+        let keystore = Keystore::new(crypto, keytype, uuid);
 
         let json = keystore.to_json().unwrap();
-        let deserialized = QsKeystore::from_json(&json).unwrap();
+        let deserialized = Keystore::from_json(&json).unwrap();
 
         assert_eq!(keystore.version, deserialized.version);
         assert_eq!(keystore.uuid, deserialized.uuid);
