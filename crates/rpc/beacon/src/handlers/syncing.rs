@@ -2,14 +2,14 @@ use std::sync::Arc;
 
 use actix_web::{HttpResponse, Responder, get, web::Data};
 use ream_api_types_beacon::{
-    error::ApiError,
     responses::{DataResponse, EXECUTION_OPTIMISTIC},
     sync::SyncStatus,
 };
+use ream_api_types_common::error::ApiError;
 use ream_execution_engine::ExecutionEngine;
 use ream_fork_choice::store::Store;
 use ream_operation_pool::OperationPool;
-use ream_storage::{db::ReamDB, tables::Table};
+use ream_storage::{db::beacon::BeaconDB, tables::table::Table};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
@@ -35,7 +35,7 @@ impl Syncing {
 /// Called by `eth/v1/node/syncing` to get the Node Version.
 #[get("/node/syncing")]
 pub async fn get_syncing_status(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     operation_pool: Data<Arc<OperationPool>>,
     execution_engine: Data<Option<ExecutionEngine>>,
 ) -> Result<impl Responder, ApiError> {

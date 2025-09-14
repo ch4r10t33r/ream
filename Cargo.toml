@@ -4,6 +4,7 @@ members = [
     "bin/ream",
     "crates/common/account_manager",
     "crates/common/api_types/beacon",
+    "crates/common/api_types/common",
     "crates/common/api_types/lean",
     "crates/common/chain/beacon",
     "crates/common/chain/lean",
@@ -32,6 +33,7 @@ members = [
     "crates/networking/p2p",
     "crates/networking/syncer",
     "crates/rpc/beacon",
+    "crates/rpc/common",
     "crates/rpc/lean",
     "crates/runtime",
     "crates/storage",
@@ -127,6 +129,7 @@ uuid = { version = "1.0", features = ["serde"] }
 # ream dependencies
 ream-account-manager = { path = "crates/common/account_manager" }
 ream-api-types-beacon = { path = "crates/common/api_types/beacon" }
+ream-api-types-common = { path = "crates/common/api_types/common" }
 ream-api-types-lean = { path = "crates/common/api_types/lean" }
 ream-bls = { path = "crates/crypto/bls", features = ["zkcrypto"] } # Default feature is zkcrypto
 ream-chain-beacon = { path = "crates/common/chain/beacon" }
@@ -151,6 +154,7 @@ ream-p2p = { path = "crates/networking/p2p" }
 ream-polynomial-commitments = { path = "crates/common/polynomial_commitments" }
 ream-post-quantum-crypto = { path = "crates/crypto/post_quantum" }
 ream-rpc-beacon = { path = "crates/rpc/beacon" }
+ream-rpc-common = { path = "crates/rpc/common" }
 ream-rpc-lean = { path = "crates/rpc/lean" }
 ream-storage = { path = "crates/storage" }
 ream-sync = { path = "crates/common/sync" }

@@ -1,11 +1,11 @@
-use alloy_primitives::B256;
-use ream_post_quantum_crypto::PQSignature;
+use alloy_primitives::{B256, FixedBytes};
 use serde::{Deserialize, Serialize};
 use ssz_derive::{Decode, Encode};
 use ssz_types::{VariableList, typenum::U4096};
+use tree_hash::TreeHash;
 use tree_hash_derive::TreeHash;
 
-use crate::vote::Vote;
+use crate::vote::SignedVote;
 
 /// Represents a signed block in the Lean chain.
 ///
@@ -14,7 +14,7 @@ use crate::vote::Vote;
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Encode, Decode, TreeHash)]
 pub struct SignedBlock {
     pub message: Block,
-    pub signature: PQSignature,
+    pub signature: FixedBytes<4000>,
 }
 
 /// Represents a block in the Lean chain.
@@ -49,6 +49,18 @@ pub struct BlockHeader {
     pub body_root: B256,
 }
 
+impl From<Block> for BlockHeader {
+    fn from(block: Block) -> Self {
+        BlockHeader {
+            slot: block.slot,
+            proposer_index: block.proposer_index,
+            parent_root: block.parent_root,
+            state_root: block.state_root,
+            body_root: block.body.tree_hash_root(),
+        }
+    }
+}
+
 /// Represents the body of a block in the Lean chain.
 ///
 /// See the [Lean specification](https://github.com/leanEthereum/leanSpec/blob/main/docs/client/containers.md#blockbody)
@@ -57,5 +69,5 @@ pub struct BlockHeader {
     Debug, Default, PartialEq, Eq, Clone, Serialize, Deserialize, Encode, Decode, TreeHash,
 )]
 pub struct BlockBody {
-    pub votes: VariableList<Vote, U4096>,
+    pub attestations: VariableList<SignedVote, U4096>,
 }

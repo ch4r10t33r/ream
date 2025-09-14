@@ -5,21 +5,23 @@ use actix_web::{
     web::{Data, Json, Path, Query},
 };
 use ream_api_types_beacon::{
-    error::ApiError,
-    id::{ID, ValidatorID},
+    id::ValidatorID,
     query::{AttestationQuery, IdQuery, StatusQuery},
     request::ValidatorsPostRequest,
     responses::{BeaconResponse, DataResponse},
     validator::{ValidatorBalance, ValidatorData, ValidatorStatus},
 };
+use ream_api_types_common::{error::ApiError, id::ID};
 use ream_bls::PublicKey;
-use ream_consensus_beacon::electra::beacon_state::BeaconState;
+use ream_consensus_beacon::{
+    electra::beacon_state::BeaconState, sync_committe_selection::SyncCommitteeSelection,
+};
 use ream_consensus_misc::{
     attestation_data::AttestationData, constants::beacon::SLOTS_PER_EPOCH, validator::Validator,
 };
 use ream_fork_choice::store::Store;
 use ream_operation_pool::OperationPool;
-use ream_storage::{db::ReamDB, tables::Field};
+use ream_storage::{db::beacon::BeaconDB, tables::field::Field};
 use serde::Serialize;
 
 use super::state::get_state_from_id;
@@ -54,7 +56,7 @@ fn build_validator_balances(
 
 #[get("/beacon/states/{state_id}/validator/{validator_id}")]
 pub async fn get_validator_from_state(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     param: Path<(ID, ValidatorID)>,
 ) -> Result<impl Responder, ApiError> {
     let (state_id, validator_id) = param.into_inner();
@@ -106,7 +108,7 @@ pub async fn get_validator_from_state(
 
 pub async fn validator_status(
     validator: &Validator,
-    db: &ReamDB,
+    db: &BeaconDB,
 ) -> Result<ValidatorStatus, ApiError> {
     let highest_slot = db
         .slot_index_provider()
@@ -128,7 +130,7 @@ pub async fn validator_status(
 
 #[get("/beacon/states/{state_id}/validators")]
 pub async fn get_validators_from_state(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     state_id: Path<ID>,
     id_query: Query<IdQuery>,
     status_query: Query<StatusQuery>,
@@ -205,7 +207,7 @@ pub async fn get_validators_from_state(
 
 #[post("/beacon/states/{state_id}/validators")]
 pub async fn post_validators_from_state(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     state_id: Path<ID>,
     request: Json<ValidatorsPostRequest>,
     _status_query: Json<StatusQuery>,
@@ -288,7 +290,7 @@ struct ValidatorIdentity {
 
 #[post("/beacon/states/{state_id}/validator_identities")]
 pub async fn post_validator_identities_from_state(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     state_id: Path<ID>,
     validator_ids: Json<Vec<ValidatorID>>,
 ) -> Result<impl Responder, ApiError> {
@@ -322,7 +324,7 @@ pub async fn post_validator_identities_from_state(
 pub async fn get_validator_balances_from_state(
     state_id: Path<ID>,
     query: Query<IdQuery>,
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
 ) -> Result<impl Responder, ApiError> {
     let state = get_state_from_id(state_id.into_inner(), &db).await?;
     Ok(
@@ -341,7 +343,7 @@ pub async fn get_validator_balances_from_state(
 pub async fn post_validator_balances_from_state(
     state_id: Path<ID>,
     body: Json<IdQuery>,
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
 ) -> Result<impl Responder, ApiError> {
     let state = get_state_from_id(state_id.into_inner(), &db).await?;
     Ok(
@@ -371,7 +373,7 @@ impl ValidatorLivenessData {
 
 #[post("/validator/liveness/{epoch}")]
 pub async fn post_validator_liveness(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     epoch: Path<u64>,
     validator_indices: Json<Vec<String>>,
 ) -> Result<impl Responder, ApiError> {
@@ -431,7 +433,7 @@ fn check_validator_participation(
 }
 #[get("/validator/attestation_data")]
 pub async fn get_attestation_data(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     opertation_pool: Data<Arc<OperationPool>>,
     query: Query<AttestationQuery>,
 ) -> Result<impl Responder, ApiError> {
@@ -484,4 +486,12 @@ pub async fn get_attestation_data(
         source: source_checkpoint,
         target: target_checkpoint,
     })))
+}
+
+/// For the initial stage, this endpoint returns a 501 as DVT support is not planned.
+#[post("/validator/sync_committee_selections")]
+pub async fn post_sync_committee_selections(
+    _selections: Json<SyncCommitteeSelection>,
+) -> Result<impl Responder, ApiError> {
+    Ok(HttpResponse::NotImplemented())
 }

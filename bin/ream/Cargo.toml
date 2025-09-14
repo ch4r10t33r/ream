@@ -22,6 +22,7 @@ chrono.workspace = true
 clap = { workspace = true, features = ["derive", "env"] }
 discv5.workspace = true
 hashbrown.workspace = true
+libp2p-identity.workspace = true
 prometheus_exporter.workspace = true
 rand.workspace = true
 rand_chacha.workspace = true
@@ -38,6 +39,7 @@ uuid.workspace = true
 # ream dependencies
 ream-account-manager.workspace = true
 ream-api-types-beacon.workspace = true
+ream-api-types-common.workspace = true
 ream-chain-lean.workspace = true
 ream-checkpoint-sync.workspace = true
 ream-consensus-beacon.workspace = true

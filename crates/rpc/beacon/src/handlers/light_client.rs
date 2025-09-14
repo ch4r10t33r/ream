@@ -3,13 +3,11 @@ use actix_web::{
     web::{Data, Path, Query},
 };
 use alloy_primitives::B256;
-use ream_api_types_beacon::{
-    error::ApiError,
-    responses::{
-        DataVersionedResponse, ETH_CONSENSUS_VERSION_HEADER, JSON_CONTENT_TYPE, SSZ_CONTENT_TYPE,
-        VERSION,
-    },
+use ream_api_types_beacon::responses::{
+    DataVersionedResponse, ETH_CONSENSUS_VERSION_HEADER, JSON_CONTENT_TYPE, SSZ_CONTENT_TYPE,
+    VERSION,
 };
+use ream_api_types_common::error::ApiError;
 use ream_consensus_misc::constants::beacon::{EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH};
 use ream_light_client::{
     bootstrap::LightClientBootstrap, finality_update::LightClientFinalityUpdate,
@@ -17,8 +15,8 @@ use ream_light_client::{
     update::LightClientUpdate,
 };
 use ream_storage::{
-    db::ReamDB,
-    tables::{Field, Table},
+    db::beacon::BeaconDB,
+    tables::{field::Field, table::Table},
 };
 use ssz::Encode;
 use tree_hash::TreeHash;
@@ -27,7 +25,7 @@ pub const MAX_REQUEST_LIGHT_CLIENT_UPDATES: u64 = 128;
 
 #[get("/beacon/light_client/bootstrap/{block_root}")]
 pub async fn get_light_client_bootstrap(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     block_root: Path<B256>,
 ) -> Result<impl Responder, ApiError> {
     let block_root = block_root.into_inner();
@@ -65,7 +63,7 @@ pub async fn get_light_client_bootstrap(
 
 #[get("/beacon/light_client/updates")]
 pub async fn get_light_client_updates(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     start_period: Query<u64>,
     count: Query<u64>,
 ) -> Result<impl Responder, ApiError> {
@@ -177,7 +175,7 @@ pub async fn get_light_client_updates(
 
 #[get("/beacon/light_client/finality_update")]
 pub async fn get_light_client_finality_update(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     http_request: HttpRequest,
 ) -> Result<impl Responder, ApiError> {
     // Get the latest finalized checkpoint
@@ -289,7 +287,7 @@ pub async fn get_light_client_finality_update(
 
 #[get("/beacon/light_client/optimistic_update")]
 pub async fn get_light_client_optimistic_update(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     http_request: HttpRequest,
 ) -> Result<impl Responder, ApiError> {
     // Get the latest head block root from the latest slot

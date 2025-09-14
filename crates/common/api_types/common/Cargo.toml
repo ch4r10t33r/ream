@@ -1,0 +1,16 @@
+[package]
+name = "ream-api-types-common"
+authors.workspace = true
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+actix-web.workspace = true
+alloy-primitives.workspace = true
+serde.workspace = true
+thiserror.workspace = true

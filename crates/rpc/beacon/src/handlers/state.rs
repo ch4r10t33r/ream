@@ -4,19 +4,18 @@ use actix_web::{
 };
 use alloy_primitives::B256;
 use ream_api_types_beacon::{
-    error::ApiError,
-    id::ID,
     query::EpochQuery,
     responses::{BeaconResponse, BeaconVersionedResponse},
 };
+use ream_api_types_common::{error::ApiError, id::ID};
 use ream_consensus_beacon::electra::beacon_state::BeaconState;
 use ream_consensus_misc::{
     checkpoint::Checkpoint, constants::beacon::SYNC_COMMITTEE_SIZE,
     misc::compute_sync_committee_period,
 };
 use ream_storage::{
-    db::ReamDB,
-    tables::{Field, Table},
+    db::beacon::BeaconDB,
+    tables::{field::Field, table::Table},
 };
 use serde::{Deserialize, Serialize};
 use tree_hash::TreeHash;
@@ -66,7 +65,7 @@ struct SyncCommitteeResponse {
     pub validator_aggregates: Vec<QuotedU64Vec>,
 }
 
-pub async fn get_state_from_id(state_id: ID, db: &ReamDB) -> Result<BeaconState, ApiError> {
+pub async fn get_state_from_id(state_id: ID, db: &BeaconDB) -> Result<BeaconState, ApiError> {
     let block_root = match state_id {
         ID::Finalized => {
             let finalized_checkpoint = db.finalized_checkpoint_provider().get().map_err(|err| {
@@ -107,7 +106,7 @@ pub async fn get_state_from_id(state_id: ID, db: &ReamDB) -> Result<BeaconState,
 
 #[get("/beacon/states/{state_id}/root")]
 pub async fn get_state_root(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     state_id: Path<ID>,
 ) -> Result<impl Responder, ApiError> {
     let state = get_state_from_id(state_id.into_inner(), &db).await?;
@@ -120,7 +119,7 @@ pub async fn get_state_root(
 /// Called by `/eth/v1/beacon/states/{state_id}/fork` to get fork of state.
 #[get("/beacon/states/{state_id}/fork")]
 pub async fn get_state_fork(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     state_id: Path<ID>,
 ) -> Result<impl Responder, ApiError> {
     let state = get_state_from_id(state_id.into_inner(), &db).await?;
@@ -131,7 +130,7 @@ pub async fn get_state_fork(
 /// Called by `/states/<state_id>/finality_checkpoints` to get the Checkpoint Data of state.
 #[get("/beacon/states/{state_id}/finality_checkpoints")]
 pub async fn get_state_finality_checkpoint(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     state_id: Path<ID>,
 ) -> Result<impl Responder, ApiError> {
     let state = get_state_from_id(state_id.into_inner(), &db).await?;
@@ -150,7 +149,7 @@ pub async fn get_state_finality_checkpoint(
 /// else will fetch randao of the state epoch
 #[get("/beacon/states/{state_id}/randao")]
 pub async fn get_state_randao(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     state_id: Path<ID>,
     query: Query<EpochQuery>,
 ) -> Result<impl Responder, ApiError> {
@@ -168,7 +167,7 @@ pub async fn get_state_randao(
 /// consolidations for state with given stateId
 #[get("/beacon/states/{state_id}/pending_consolidations")]
 pub async fn get_pending_consolidations(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     state_id: Path<ID>,
 ) -> Result<impl Responder, ApiError> {
     let state = get_state_from_id(state_id.into_inner(), &db).await?;
@@ -184,7 +183,7 @@ pub async fn get_pending_consolidations(
 /// for state with given stateId
 #[get("/beacon/states/{state_id}/pending_deposits")]
 pub async fn get_pending_deposits(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     state_id: Path<ID>,
 ) -> Result<impl Responder, ApiError> {
     let state = get_state_from_id(state_id.into_inner(), &db).await?;
@@ -200,7 +199,7 @@ pub async fn get_pending_deposits(
 /// for state with given stateId
 #[get("/beacon/states/{state_id}/pending_partial_withdrawals")]
 pub async fn get_pending_partial_withdrawals(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     state_id: Path<ID>,
 ) -> Result<impl Responder, ApiError> {
     let state = get_state_from_id(state_id.into_inner(), &db).await?;
@@ -217,7 +216,7 @@ pub async fn get_pending_partial_withdrawals(
 /// will use `epoch` if provided.
 #[get("/beacon/states/{state_id}/sync_committees")]
 pub async fn get_sync_committees(
-    db: Data<ReamDB>,
+    db: Data<BeaconDB>,
     state_id: Path<ID>,
     epoch: Query<EpochQuery>,
 ) -> Result<impl Responder, ApiError> {
