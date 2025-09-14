@@ -78,7 +78,6 @@ impl AccountManagerConfig {
             "Lifetime must be at least {MIN_LIFETIME}"
         );
 
-
         Ok(())
     }
 
