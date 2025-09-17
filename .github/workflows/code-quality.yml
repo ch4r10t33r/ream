@@ -37,18 +37,63 @@ jobs:
         echo "🔍 Scanning: src/, bin/, crates/, examples/, tests/, benches/"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       
+    - name: Initialize failure tracking
+      run: echo "FAILED_CHECKS=" >> $GITHUB_ENV
+        
+    - name: Check formatting
+      run: |
+        echo "1️⃣ Checking code formatting..."
+        if ! cargo fmt --all -- --check; then
+          echo "❌ Code formatting check failed"
+          echo "FAILED_CHECKS=${{ env.FAILED_CHECKS }} formatting" >> $GITHUB_ENV
+        else
+          echo "✅ Code formatting looks good"
+        fi
+        
+    - name: Run Clippy
+      run: |
+        echo "2️⃣ Running Clippy linter..."
+        if ! cargo clippy --all-targets --all-features -- -D warnings; then
+          echo "❌ Clippy check failed"
+          echo "FAILED_CHECKS=${{ env.FAILED_CHECKS }} clippy" >> $GITHUB_ENV
+        else
+          echo "✅ Clippy check passed"
+        fi
+        
+    - name: Run tests
+      run: |
+        echo "3️⃣ Running tests..."
+        if ! cargo test --all-features --verbose; then
+          echo "❌ Tests failed"
+          echo "FAILED_CHECKS=${{ env.FAILED_CHECKS }} tests" >> $GITHUB_ENV
+        else
+          echo "✅ All tests passed"
+        fi
+        
     - name: Check for hardcoded values
       run: |
-        echo "Checking for hardcoded magic numbers in all Rust files..."
+        echo "4️⃣ Checking for hardcoded magic numbers..."
         if grep -r --include="*.rs" -E '\b[0-9]{3,}\b' . --exclude-dir=target && ! grep -r --include="*.rs" 'const.*=' . --exclude-dir=target; then
           echo "❌ Found potential magic numbers. Use constants instead."
-          exit 1
+          echo "FAILED_CHECKS=${{ env.FAILED_CHECKS }} hardcoded-values" >> $GITHUB_ENV
+        else
+          echo "✅ No hardcoded values found"
         fi
-        echo "✅ No hardcoded values found"
+        
+    - name: Check variable naming conventions
+      run: |
+        echo "5️⃣ Checking variable naming conventions..."
+        if grep -r --include="*.rs" -E 'let\s+[a-z]*[aeiou]*[bcdfghjklmnpqrstvwxyz]{3,}[aeiou]*[bcdfghjklmnpqrstvwxyz]\s*=' . --exclude-dir=target | grep -E '(usr|addr|cfg|mgr|ctx|impl|proc)'; then
+          echo "❌ Found potential abbreviations in variable names"
+          echo "Use full descriptive names as per copilot-instructions.md"
+          echo "FAILED_CHECKS=${{ env.FAILED_CHECKS }} variable-naming" >> $GITHUB_ENV
+        else
+          echo "✅ Variable naming looks good"
+        fi
         
     - name: Check for inline variables in macros
       run: |
-        echo "Checking for proper variable inlining in log macros across all Rust files..."
+        echo "6️⃣ Checking log macro formatting..."
         violations=$(grep -r --include="*.rs" -E '(info!|debug!|warn!|error!|println!)\s*\([^)]*\{\}' . --exclude-dir=target | \
           grep -v -E '\w+\.\w+\(\)' || true)
         if [ -n "$violations" ]; then
@@ -56,33 +101,35 @@ jobs:
           echo "$violations"
           echo "Example: info!(\"User {user_id} status {status}\") instead of info!(\"User {} status {}\", user_id, status)"
           echo "Note: Function calls like variable.method() are allowed as exceptions"
-          echo "See copilot-instructions.md for logging best practices"
-          exit 1
+          echo "FAILED_CHECKS=${{ env.FAILED_CHECKS }} log-macros" >> $GITHUB_ENV
+        else
+          echo "✅ Log macro usage looks good"
         fi
-        echo "✅ Log macro usage looks good"
     
     - name: Check for unwrap() usage
       run: |
-        echo "Checking for unwrap() usage across all Rust files..."
+        echo "7️⃣ Checking unwrap() usage..."
         unwrap_count=$(grep -r --include="*.rs" '\.unwrap()' . --exclude-dir=target | wc -l || true)
         if [ "$unwrap_count" -gt 10 ]; then
           echo "❌ Found $unwrap_count instances of .unwrap(). Consider using proper error handling."
           echo "See copilot-instructions.md for error handling best practices"
           grep -r --include="*.rs" '\.unwrap()' . --exclude-dir=target | head -10
-          exit 1
+          echo "FAILED_CHECKS=${{ env.FAILED_CHECKS }} unwrap-usage" >> $GITHUB_ENV
+        else
+          echo "✅ Unwrap usage is reasonable ($unwrap_count instances)"
         fi
-        echo "✅ Unwrap usage is reasonable ($unwrap_count instances)"
     
     - name: Check for lazy variable declaration
       run: |
-        echo "Checking for early variable declarations..."
+        echo "8️⃣ Checking variable declaration patterns..."
         # Look for functions with multiple let statements at the beginning
         if grep -r --include="*.rs" -A 10 'fn.*{' . --exclude-dir=target | grep -E 'let.*=.*;\s*$' | grep -E 'let.*=.*;\s*let.*=.*;\s*let.*=.*;'; then
           echo "❌ Found potential early variable declarations. Declare variables when needed."
           echo "See copilot-instructions.md for lazy declaration guidelines"
-          exit 1
+          echo "FAILED_CHECKS=${{ env.FAILED_CHECKS }} lazy-declaration" >> $GITHUB_ENV
+        else
+          echo "✅ Variable declarations look appropriately lazy"
         fi
-        echo "✅ Variable declarations look appropriately lazy"
     
     - name: Check for TODO/FIXME comments
       run: |
@@ -94,6 +141,18 @@ jobs:
           echo "Consider addressing these before merging"
         else
           echo "✅ No TODO/FIXME comments found"
+        fi
+        
+    - name: Final validation result
+      run: |
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        if [ -n "${{ env.FAILED_CHECKS }}" ]; then
+          echo "❌ Code quality checks FAILED for:${{ env.FAILED_CHECKS }}"
+          echo "Please fix the issues above and re-run the workflow"
+          exit 1
+        else
+          echo "✅ All code quality checks PASSED!"
+          echo "Code follows all guidelines from copilot-instructions.md"
         fi
 
   security-audit:
