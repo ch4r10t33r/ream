@@ -3,10 +3,11 @@ use bip39::Mnemonic;
 use clap::Parser;
 use tracing::info;
 
-const MIN_CHUNK_SIZE: u64 = 4;
-const MIN_LIFETIME: u64 = 18;
+const MIN_CHUNK_SIZE: u32 = 4;
+const MIN_LIFETIME: u32 = 18;
 const DEFAULT_ACTIVATION_EPOCH: usize = 0;
 const DEFAULT_NUM_ACTIVE_EPOCHS: usize = 1 << 18;
+const DEFAULT_KEYSTORE_PATH: &str = "./keystore/";
 
 #[derive(Debug, Parser)]
 pub struct AccountManagerConfig {
@@ -16,11 +17,11 @@ pub struct AccountManagerConfig {
 
     /// Account lifetime in 2 ** lifetime slots
     #[arg(short, long, default_value_t = 18)]
-    pub lifetime: u64,
+    pub lifetime: u32,
 
     /// Chunk size for messages
     #[arg(short, long, default_value_t = 5)]
-    pub chunk_size: u64,
+    pub chunk_size: u32,
 
     /// Seed phrase for key generation
     #[arg(short, long, conflicts_with = "import_keystore")]
@@ -39,7 +40,7 @@ pub struct AccountManagerConfig {
     pub num_active_epochs: usize,
 
     /// Path for keystore file
-    #[arg(long, default_value = "./.keystore/")]
+    #[arg(long, default_value = DEFAULT_KEYSTORE_PATH)]
     pub path: Option<String>,
 
     /// Import existing keystore
@@ -57,7 +58,7 @@ impl Default for AccountManagerConfig {
             passphrase: None,
             activation_epoch: DEFAULT_ACTIVATION_EPOCH,
             num_active_epochs: DEFAULT_NUM_ACTIVE_EPOCHS,
-            path: Some("./.keystore/".to_string()),
+            path: Some(DEFAULT_KEYSTORE_PATH.to_string()),
             import_keystore: None,
         }
     }

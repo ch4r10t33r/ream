@@ -169,7 +169,7 @@ impl Keystore {
         // Store the seed phrase as encrypted data (hex encoded)
         let ciphertext = hex::encode(seed_phrase.as_bytes());
 
-        let kdf = KdfParams::new_full(65536, 3, 4, salt);
+        let kdf = KdfParams::new_full(65536, 4, 2, salt);
         let cipher = CipherParams::new(nonce, tag, ciphertext);
         let crypto = CryptoParams { kdf, cipher };
         let keytype = KeyType::new(lifetime, activation_epoch);

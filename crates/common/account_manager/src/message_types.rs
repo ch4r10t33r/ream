@@ -1,13 +1,22 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MessageType {
     Attestation,
-    Blocks,
+    Block,
+}
+
+impl std::fmt::Display for MessageType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MessageType::Attestation => write!(f, "Attestation"),
+            MessageType::Block => write!(f, "Block"),
+        }
+    }
 }
 
 impl MessageType {
     // Method to get all enum variants as an array
     pub const fn all() -> [MessageType; 2] {
-        [MessageType::Attestation, MessageType::Blocks]
+        [MessageType::Attestation, MessageType::Block]
     }
 
     // Iterator method to loop through all variants

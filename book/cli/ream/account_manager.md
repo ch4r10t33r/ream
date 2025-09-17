@@ -16,7 +16,7 @@ Options:
       --passphrase <PASSPHRASE>                Optional BIP39 passphrase used with the seed phrase
       --activation-epoch <ACTIVATION_EPOCH>    Activation epoch for the validator [default: 0]
       --num-active-epochs <NUM_ACTIVE_EPOCHS>  Number of active epochs [default: 262144]
-      --path <PATH>                            Path for keystore file [default: ./.keystore/]
+      --path <PATH>                            Path for keystore file [default: ./keystore/]
       --import-keystore <IMPORT_KEYSTORE>      Import existing keystore
   -h, --help                                   Print help
 ```

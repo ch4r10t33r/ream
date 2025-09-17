@@ -429,16 +429,17 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
             );
 
             // Create keystore file using Keystore
+            // TODO: This is a placeholder solution to create a keystore file.
             let keystore = Keystore::from_seed_phrase(
                 &seed_phrase,
-                config.lifetime as u32,
-                config.activation_epoch as u32,
-                Some(format!("Ream validator keystore for {:?}", message_type)),
+                config.lifetime,
+                config.activation_epoch.try_into().unwrap(),
+                Some(format!("Ream validator keystore for {}", message_type)),
                 Some(format!("m/44'/60'/0'/0/{index}")),
             );
 
             // Write keystore to file with enum name
-            let filename = format!("{:?}.json", message_type);
+            let filename = message_type.to_string();
             let keystore_file_path = keystore_dir.join(filename);
             let keystore_json = keystore.to_json().expect("Failed to serialize keystore");
 
