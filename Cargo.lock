@@ -5806,6 +5806,7 @@ dependencies = [
  "ream-api-types-common",
  "ream-node",
  "serde",
+ "tracing",
 ]
 
 [[package]]
