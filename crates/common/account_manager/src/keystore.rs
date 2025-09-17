@@ -278,7 +278,14 @@ impl Keystore {
         let crypto = CryptoParams { kdf, cipher };
         let keytype = KeyType::new(lifetime, activation_epoch);
 
-        let mut keystore = Self::new(crypto, keytype, uuid);
+        let mut keystore = Self::new(
+            CryptoParams {
+                kdf: KdfParams::new_full(65536, 4, 2, salt),
+                cipher: CipherParams::new(nonce, tag, ciphertext),
+            },
+            KeyType::new(lifetime, activation_epoch),
+            Uuid::new_v4(),
+        );
         keystore.description = description;
         keystore.path = path;
 
