@@ -387,22 +387,7 @@ pub async fn run_validator_node(config: ValidatorNodeConfig, executor: ReamExecu
 /// This function initializes the account manager by validating the configuration,
 /// generating keys, and starting the account manager service.
 pub async fn run_account_manager(mut config: AccountManagerConfig) {
-    println!(
-        r#"
-        
-        ╔═══════════════════════════════════════════════════════╗
-        ║               REAM ACCOUNT MANAGER                    ║
-        ║                                                       ║
-        ║    ┌─ Generating Keys ─┐                              ║
-        ║    │ ████████████████ │ ▓▓▓ Cryptographic Keys        ║
-        ║    │ ████████████████ │ ▓▓▓ Message Attestation       ║
-        ║    └──────────────────┘                               ║
-        ║                                                       ║
-        ║    🔐 Secure • 🔑 Deterministic • 📝 Multi-Purpose    ║
-        ╚═══════════════════════════════════════════════════════╝
-        
-    "#
-    );
+    info!("Starting account manager...");
 
     // Validate the configuration
     config
