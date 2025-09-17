@@ -14,8 +14,8 @@ pub mod utils;
 pub fn generate_keys(
     seed_phrase: &str,
     wallet_index: u32,
-    activation_epoch: usize,
-    num_active_epochs: usize,
+    activation_epoch: u32,
+    num_active_epochs: u32,
     passphrase: &str,
 ) -> (PublicKey, PrivateKey) {
     info!(
@@ -37,8 +37,8 @@ pub fn generate_keys(
     // Use the derived seed directly for hashsig key generation
     let (public_key, private_key) = PrivateKey::generate(
         &mut <ChaCha20Rng as SeedableRng>::from_seed(derived_seed),
-        activation_epoch,
-        num_active_epochs,
+        activation_epoch as usize,
+        num_active_epochs as usize,
     );
 
     // Display public key contents

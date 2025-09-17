@@ -12,7 +12,7 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 bip39.workspace = true
-chrono.workspace = true
+chrono = { version = "0.4", features = ["serde"] }
 hashsig.workspace = true
 hex.workspace = true
 rand.workspace = true
@@ -20,9 +20,8 @@ rand_chacha.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
-sha3.workspace = true
 tracing.workspace = true
-uuid.workspace = true
+uuid = { version = "1.0", features = ["v4", "serde"] }
 
 # ream dependencies
 ream-post-quantum-crypto.workspace = true

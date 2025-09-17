@@ -403,12 +403,11 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
     let seed_phrase = config.get_seed_phrase();
 
     // Create keystore directory if it doesn't exist
-    let default_path = "./.keystore/".to_string();
-    let keystore_path = config.path.as_ref().unwrap_or(&default_path);
+    let keystore_path = &config.path;
     let keystore_dir = Path::new(keystore_path);
     if !keystore_dir.exists() {
         fs::create_dir_all(keystore_dir).expect("Failed to create keystore directory");
-        info!("Created keystore directory: {default_path}");
+        info!("Created keystore directory: {keystore_path}");
     }
 
     // Measure key generation time
@@ -434,7 +433,7 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
             let keystore = Keystore::from_seed_phrase(
                 &seed_phrase,
                 config.lifetime,
-                config.activation_epoch.try_into().unwrap(),
+                config.activation_epoch,
                 Some(format!("Ream validator keystore for {}", message_type)),
                 Some(format!("m/44'/60'/0'/0/{index}")),
             );
@@ -446,7 +445,7 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
 
             fs::write(&keystore_file_path, keystore_json).expect("Failed to write keystore file");
 
-            info!("Keystore written to path: {default_path}");
+            info!("Keystore written to path: {}", keystore_file_path.display());
         });
     let duration = start_time.elapsed();
     info!("Key generation complete, took {:?}", duration);

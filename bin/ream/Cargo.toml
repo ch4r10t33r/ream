@@ -18,7 +18,7 @@ path = "src/main.rs"
 alloy-primitives.workspace = true
 anyhow.workspace = true
 bip39.workspace = true
-chrono.workspace = true
+chrono = { version = "0.4", features = ["serde"] }
 clap = { workspace = true, features = ["derive", "env"] }
 discv5.workspace = true
 hashbrown.workspace = true
@@ -27,14 +27,11 @@ prometheus_exporter.workspace = true
 rand.workspace = true
 rand_chacha.workspace = true
 rayon.workspace = true
-serde.workspace = true
-serde_json.workspace = true
 tokio.workspace = true
 tracing = { workspace = true, features = ["log"] }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 unicode-normalization.workspace = true
 url.workspace = true
-uuid.workspace = true
 
 # ream dependencies
 ream-account-manager.workspace = true

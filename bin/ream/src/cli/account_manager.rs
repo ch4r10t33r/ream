@@ -5,9 +5,9 @@ use tracing::info;
 
 const MIN_CHUNK_SIZE: u32 = 4;
 const MIN_LIFETIME: u32 = 18;
-const DEFAULT_ACTIVATION_EPOCH: usize = 0;
-const DEFAULT_NUM_ACTIVE_EPOCHS: usize = 1 << 18;
-const DEFAULT_KEYSTORE_PATH: &str = "./keystore/";
+const DEFAULT_ACTIVATION_EPOCH: u32 = 0;
+const DEFAULT_NUM_ACTIVE_EPOCHS: u32 = 1 << 18;
+const DEFAULT_KEYSTORE_PATH: &str = "./.keystore/";
 
 #[derive(Debug, Parser)]
 pub struct AccountManagerConfig {
@@ -33,15 +33,15 @@ pub struct AccountManagerConfig {
 
     /// Activation epoch for the validator
     #[arg(long, default_value_t = DEFAULT_ACTIVATION_EPOCH)]
-    pub activation_epoch: usize,
+    pub activation_epoch: u32,
 
     /// Number of active epochs
     #[arg(long, default_value_t = DEFAULT_NUM_ACTIVE_EPOCHS)]
-    pub num_active_epochs: usize,
+    pub num_active_epochs: u32,
 
     /// Path for keystore file
     #[arg(long, default_value = DEFAULT_KEYSTORE_PATH)]
-    pub path: Option<String>,
+    pub path: String,
 
     /// Import existing keystore
     #[arg(long, conflicts_with = "seed_phrase")]
@@ -58,7 +58,7 @@ impl Default for AccountManagerConfig {
             passphrase: None,
             activation_epoch: DEFAULT_ACTIVATION_EPOCH,
             num_active_epochs: DEFAULT_NUM_ACTIVE_EPOCHS,
-            path: Some(DEFAULT_KEYSTORE_PATH.to_string()),
+            path: DEFAULT_KEYSTORE_PATH.to_string(),
             import_keystore: None,
         }
     }

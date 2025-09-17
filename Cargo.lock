@@ -5249,14 +5249,11 @@ dependencies = [
  "ream-sync",
  "ream-validator-beacon",
  "ream-validator-lean",
- "serde",
- "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",
  "unicode-normalization",
  "url",
- "uuid",
 ]
 
 [[package]]
@@ -5274,7 +5271,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.8",
- "sha3",
  "tracing",
  "uuid",
 ]
