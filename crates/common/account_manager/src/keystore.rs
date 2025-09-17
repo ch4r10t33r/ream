@@ -297,17 +297,22 @@ impl Keystore {
 
         // Validate all hex strings
         let cipher = &self.crypto.cipher;
-        validate_hex_string(&cipher.ciphertext)
-            .map_err(|_| anyhow!("ciphertext must be a valid hex string"))?;
-        validate_hex_string(&cipher.params.nonce)
-            .map_err(|_| anyhow!("nonce must be a valid hex string"))?;
-        validate_hex_string(&cipher.params.tag)
-            .map_err(|_| anyhow!("tag must be a valid hex string"))?;
+        if !validate_hex_string(&cipher.ciphertext) {
+            return Err(anyhow!("ciphertext must be a valid hex string"));
+        }
+        if !validate_hex_string(&cipher.params.nonce) {
+            return Err(anyhow!("nonce must be a valid hex string"));
+        }
+        if !validate_hex_string(&cipher.params.tag) {
+            return Err(anyhow!("tag must be a valid hex string"));
+        }
 
         let salt = match &self.crypto.kdf.params {
             KdfParamsInner::Full { salt, .. } | KdfParamsInner::Short { salt, .. } => salt,
         };
-        validate_hex_string(salt).map_err(|_| anyhow!("salt must be a valid hex string"))?;
+        if !validate_hex_string(salt) {
+            return Err(anyhow!("salt must be a valid hex string"));
+        }
 
         Ok(())
     }

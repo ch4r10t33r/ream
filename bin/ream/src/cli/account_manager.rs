@@ -39,7 +39,7 @@ pub struct AccountManagerConfig {
     #[arg(long, default_value_t = DEFAULT_NUM_ACTIVE_EPOCHS)]
     pub num_active_epochs: u32,
 
-    /// Path for keystore file
+    /// Path for keystore directory
     #[arg(long, default_value = DEFAULT_KEYSTORE_PATH)]
     pub path: String,
 
