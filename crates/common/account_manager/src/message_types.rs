@@ -14,17 +14,17 @@ impl std::fmt::Display for MessageType {
 }
 
 impl MessageType {
-    // Method to get all enum variants as an array
+    /// Method to get all enum variants as an array
     pub const fn all() -> [MessageType; 2] {
         [MessageType::Attestation, MessageType::Block]
     }
 
-    // Iterator method to loop through all variants
+    /// Iterator method to loop through all variants
     pub fn iter() -> impl Iterator<Item = MessageType> + 'static {
         Self::all().into_iter()
     }
 
-    // Method to return the number of enum variants
+    /// Method to return the number of enum variants
     pub const fn count() -> usize {
         Self::all().len()
     }
