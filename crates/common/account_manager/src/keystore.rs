@@ -7,15 +7,119 @@ use uuid::Uuid;
 
 use crate::utils::validate_hex_string;
 
-// Cryptographic algorithm constants
+// Constants
+/// The required keystore version
+pub const KEYSTORE_VERSION: u32 = 5;
+
+// Cryptographic algorithm enums with validation
+
 /// Key derivation function used for password-based key derivation
-pub const KDF_FUNCTION: &str = "argon2id";
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum KdfFunction {
+    #[serde(rename = "argon2id")]
+    Argon2Id,
+}
+
+impl std::fmt::Display for KdfFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KdfFunction::Argon2Id => write!(f, "argon2id"),
+        }
+    }
+}
+
+impl std::str::FromStr for KdfFunction {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "argon2id" => Ok(KdfFunction::Argon2Id),
+            _ => Err(anyhow!("Invalid KDF function: {}", s)),
+        }
+    }
+}
+
+impl KdfFunction {
+    pub const fn default() -> Self {
+        KdfFunction::Argon2Id
+    }
+
+    pub fn all() -> &'static [KdfFunction] {
+        &[KdfFunction::Argon2Id]
+    }
+}
 
 /// Symmetric encryption cipher used for encrypting the private key
-pub const CIPHER_FUNCTION: &str = "aes-256-gcm";
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CipherFunction {
+    #[serde(rename = "aes-256-gcm")]
+    Aes256Gcm,
+}
+
+impl std::fmt::Display for CipherFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CipherFunction::Aes256Gcm => write!(f, "aes-256-gcm"),
+        }
+    }
+}
+
+impl std::str::FromStr for CipherFunction {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "aes-256-gcm" => Ok(CipherFunction::Aes256Gcm),
+            _ => Err(anyhow!("Invalid cipher function: {}", s)),
+        }
+    }
+}
+
+impl CipherFunction {
+    pub const fn default() -> Self {
+        CipherFunction::Aes256Gcm
+    }
+
+    pub fn all() -> &'static [CipherFunction] {
+        &[CipherFunction::Aes256Gcm]
+    }
+}
 
 /// Post-quantum signature scheme used for key generation and signing
-pub const KEYTYPE_FUNCTION: &str = "xmss-poisedon2-ots-seed";
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum KeyTypeFunction {
+    #[serde(rename = "xmss-poisedon2-ots-seed")]
+    XmssPoseidon2OtsSeed,
+}
+
+impl std::fmt::Display for KeyTypeFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KeyTypeFunction::XmssPoseidon2OtsSeed => write!(f, "xmss-poisedon2-ots-seed"),
+        }
+    }
+}
+
+impl std::str::FromStr for KeyTypeFunction {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "xmss-poisedon2-ots-seed" => Ok(KeyTypeFunction::XmssPoseidon2OtsSeed),
+            _ => Err(anyhow!("Invalid key type function: {}", s)),
+        }
+    }
+}
+
+impl KeyTypeFunction {
+    pub const fn default() -> Self {
+        KeyTypeFunction::XmssPoseidon2OtsSeed
+    }
+
+    pub fn all() -> &'static [KeyTypeFunction] {
+        &[KeyTypeFunction::XmssPoseidon2OtsSeed]
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Keystore {
@@ -59,7 +163,7 @@ pub struct CryptoParams {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct KdfParams {
     /// KDF function name, must be "argon2id"
-    pub function: String,
+    pub function: KdfFunction,
 
     /// KDF parameters - supports both naming conventions
     pub params: KdfParamsInner,
@@ -87,7 +191,7 @@ pub enum KdfParamsInner {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CipherParams {
     /// Cipher function name, must be "aes-256-gcm"
-    pub function: String,
+    pub function: CipherFunction,
 
     /// Cipher parameters
     pub params: CipherParamsInner,
@@ -108,7 +212,7 @@ pub struct CipherParamsInner {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct KeyType {
     /// Key type function name
-    pub function: String,
+    pub function: KeyTypeFunction,
 
     /// Key type parameters
     pub params: KeyTypeParams,
@@ -134,7 +238,7 @@ impl Keystore {
     /// Create a new quantum-secure keystore
     pub fn new(crypto: CryptoParams, keytype: KeyType, uuid: Uuid) -> Self {
         Self {
-            version: 5,
+            version: KEYSTORE_VERSION,
             crypto,
             keytype,
             description: None,
@@ -183,42 +287,27 @@ impl Keystore {
 
     /// Validate the keystore structure
     pub fn validate(&self) -> Result<()> {
-        // Check version
-        if self.version != 5 {
-            return Err(anyhow!("Version must be 5"));
+        // Validate required constants for external data
+        if self.version != KEYSTORE_VERSION {
+            return Err(anyhow!("Version must be {}", KEYSTORE_VERSION));
         }
-
-        // Check quantum_secure flag
         if !self.quantum_secure {
             return Err(anyhow!("quantum_secure must be true"));
         }
 
-        // Check KDF function
-        if self.crypto.kdf.function != KDF_FUNCTION {
-            return Err(anyhow!("KDF function must be {}", KDF_FUNCTION));
-        }
+        // Validate all hex strings
+        let cipher = &self.crypto.cipher;
+        validate_hex_string(&cipher.ciphertext)
+            .map_err(|_| anyhow!("ciphertext must be a valid hex string"))?;
+        validate_hex_string(&cipher.params.nonce)
+            .map_err(|_| anyhow!("nonce must be a valid hex string"))?;
+        validate_hex_string(&cipher.params.tag)
+            .map_err(|_| anyhow!("tag must be a valid hex string"))?;
 
-        // Check cipher function
-        if self.crypto.cipher.function != CIPHER_FUNCTION {
-            return Err(anyhow!("Cipher function must be {}", CIPHER_FUNCTION));
-        }
-
-        // Check keytype function
-        if self.keytype.function != KEYTYPE_FUNCTION {
-            return Err(anyhow!("Keytype function must be {}", KEYTYPE_FUNCTION));
-        }
-
-        // Validate hex strings
-        validate_hex_string(&self.crypto.cipher.ciphertext, "ciphertext")?;
-        validate_hex_string(&self.crypto.cipher.params.nonce, "nonce")?;
-        validate_hex_string(&self.crypto.cipher.params.tag, "tag")?;
-
-        // Validate salt
-        match &self.crypto.kdf.params {
-            KdfParamsInner::Full { salt, .. } | KdfParamsInner::Short { salt, .. } => {
-                validate_hex_string(salt, "salt")?;
-            }
-        }
+        let salt = match &self.crypto.kdf.params {
+            KdfParamsInner::Full { salt, .. } | KdfParamsInner::Short { salt, .. } => salt,
+        };
+        validate_hex_string(salt).map_err(|_| anyhow!("salt must be a valid hex string"))?;
 
         Ok(())
     }
@@ -238,7 +327,7 @@ impl KdfParams {
     /// Create new Argon2id KDF parameters (full names)
     pub fn new_full(memory: u32, iterations: u32, parallelism: u32, salt: String) -> Self {
         Self {
-            function: KDF_FUNCTION.to_string(),
+            function: KdfFunction::default(),
             params: KdfParamsInner::Full {
                 memory,
                 iterations,
@@ -251,7 +340,7 @@ impl KdfParams {
     /// Create new Argon2id KDF parameters (short names)
     pub fn new_short(m: u32, t: u32, p: u32, salt: String) -> Self {
         Self {
-            function: KDF_FUNCTION.to_string(),
+            function: KdfFunction::default(),
             params: KdfParamsInner::Short { m, t, p, salt },
         }
     }
@@ -261,7 +350,7 @@ impl CipherParams {
     /// Create new AES-256-GCM cipher parameters
     pub fn new(nonce: String, tag: String, ciphertext: String) -> Self {
         Self {
-            function: CIPHER_FUNCTION.to_string(),
+            function: CipherFunction::default(),
             params: CipherParamsInner { nonce, tag },
             ciphertext,
         }
@@ -272,7 +361,7 @@ impl KeyType {
     /// Create new XMSS-Poseidon2 OTS seed key type
     pub fn new(lifetime: u32, activation_epoch: u32) -> Self {
         Self {
-            function: KEYTYPE_FUNCTION.to_string(),
+            function: KeyTypeFunction::default(),
             params: KeyTypeParams {
                 lifetime,
                 activation_epoch,

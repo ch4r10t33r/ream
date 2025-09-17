@@ -414,9 +414,8 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
     let start_time = Instant::now();
 
     // Parallelize key generation for each message type
-    let message_types: Vec<MessageType> = MessageType::iter().collect();
-
-    message_types
+    MessageType::iter()
+        .collect::<Vec<_>>()
         .par_iter()
         .enumerate()
         .for_each(|(index, &message_type)| {
