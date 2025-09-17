@@ -43,9 +43,6 @@ pub struct AccountManagerConfig {
     #[arg(long, default_value = DEFAULT_KEYSTORE_PATH)]
     pub path: String,
 
-    /// Import existing keystore
-    #[arg(long, conflicts_with = "seed_phrase")]
-    pub import_keystore: Option<String>,
 }
 
 impl Default for AccountManagerConfig {
