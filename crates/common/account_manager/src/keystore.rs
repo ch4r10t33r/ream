@@ -14,111 +14,27 @@ pub const KEYSTORE_VERSION: u32 = 5;
 // Cryptographic algorithm enums with validation
 
 /// Key derivation function used for password-based key derivation
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum KdfFunction {
+    #[default]
     #[serde(rename = "argon2id")]
     Argon2Id,
 }
 
-impl std::fmt::Display for KdfFunction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            KdfFunction::Argon2Id => write!(f, "argon2id"),
-        }
-    }
-}
-
-impl std::str::FromStr for KdfFunction {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> anyhow::Result<Self> {
-        match s {
-            "argon2id" => Ok(KdfFunction::Argon2Id),
-            _ => Err(anyhow!("Invalid KDF function: {}", s)),
-        }
-    }
-}
-
-impl KdfFunction {
-    pub const fn default() -> Self {
-        KdfFunction::Argon2Id
-    }
-
-    pub fn all() -> &'static [KdfFunction] {
-        &[KdfFunction::Argon2Id]
-    }
-}
-
 /// Symmetric encryption cipher used for encrypting the private key
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum CipherFunction {
+    #[default]
     #[serde(rename = "aes-256-gcm")]
     Aes256Gcm,
 }
 
-impl std::fmt::Display for CipherFunction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CipherFunction::Aes256Gcm => write!(f, "aes-256-gcm"),
-        }
-    }
-}
-
-impl std::str::FromStr for CipherFunction {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> anyhow::Result<Self> {
-        match s {
-            "aes-256-gcm" => Ok(CipherFunction::Aes256Gcm),
-            _ => Err(anyhow!("Invalid cipher function: {}", s)),
-        }
-    }
-}
-
-impl CipherFunction {
-    pub const fn default() -> Self {
-        CipherFunction::Aes256Gcm
-    }
-
-    pub fn all() -> &'static [CipherFunction] {
-        &[CipherFunction::Aes256Gcm]
-    }
-}
-
 /// Post-quantum signature scheme used for key generation and signing
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum KeyTypeFunction {
+    #[default]
     #[serde(rename = "xmss-poisedon2-ots-seed")]
     XmssPoseidon2OtsSeed,
-}
-
-impl std::fmt::Display for KeyTypeFunction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            KeyTypeFunction::XmssPoseidon2OtsSeed => write!(f, "xmss-poisedon2-ots-seed"),
-        }
-    }
-}
-
-impl std::str::FromStr for KeyTypeFunction {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> anyhow::Result<Self> {
-        match s {
-            "xmss-poisedon2-ots-seed" => Ok(KeyTypeFunction::XmssPoseidon2OtsSeed),
-            _ => Err(anyhow!("Invalid key type function: {}", s)),
-        }
-    }
-}
-
-impl KeyTypeFunction {
-    pub const fn default() -> Self {
-        KeyTypeFunction::XmssPoseidon2OtsSeed
-    }
-
-    pub fn all() -> &'static [KeyTypeFunction] {
-        &[KeyTypeFunction::XmssPoseidon2OtsSeed]
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
