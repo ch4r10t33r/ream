@@ -296,7 +296,7 @@ impl Keystore {
     pub fn validate(&self) -> anyhow::Result<()> {
         // Validate required constants for external data
         if self.version != KEYSTORE_VERSION {
-            return Err(anyhow!("Version must be {}", KEYSTORE_VERSION));
+            return Err(anyhow!("Version must be {KEYSTORE_VERSION}"));
         }
         if !self.quantum_secure {
             return Err(anyhow!("quantum_secure must be true"));
