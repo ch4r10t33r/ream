@@ -1,0 +1,102 @@
+name: Code Quality Checks
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  code-quality:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Check formatting
+      run: cargo fmt --all -- --check
+      
+    - name: Run Clippy (enforce warnings as errors)
+      run: cargo clippy --all-targets --all-features -- -D warnings
+      
+    - name: Run tests
+      run: cargo test --all-features --verbose
+      
+    - name: Check for hardcoded values
+      run: |
+        echo "Checking for hardcoded magic numbers..."
+        if grep -r --include="*.rs" -E '\b[0-9]{3,}\b' src/ && ! grep -r --include="*.rs" 'const.*=' src/; then
+          echo "❌ Found potential magic numbers. Use constants instead."
+          exit 1
+        fi
+        echo "✅ No hardcoded values found"
+    
+    - name: Check variable naming conventions
+      run: |
+        echo "Checking for abbreviations in variable names..."
+        if grep -r --include="*.rs" -E 'let\s+[a-z]*[aeiou]*[bcdfghjklmnpqrstvwxyz]{3,}[aeiou]*[bcdfghjklmnpqrstvwxyz]\s*=' src/ | grep -E '(usr|addr|cfg|mgr|ctx|impl|proc)'; then
+          echo "❌ Found potential abbreviations in variable names"
+          exit 1
+        fi
+        echo "✅ Variable naming looks good"
+    
+    - name: Check for inline variables in macros
+      run: |
+        echo "Checking for proper variable inlining in log macros..."
+        if grep -r --include="*.rs" -E '(info!|debug!|warn!|error!|println!)\s*\([^)]*\{\}' src/; then
+          echo "❌ Found {} placeholders in log macros. Use inline variables instead."
+          echo "Example: info!(\"User {user_id} status {status}\") instead of info!(\"User {} status {}\", user_id, status)"
+          exit 1
+        fi
+        echo "✅ Log macro usage looks good"
+    
+    - name: Check for unwrap() usage
+      run: |
+        echo "Checking for unwrap() usage..."
+        unwrap_count=$(grep -r --include="*.rs" '\.unwrap()' src/ | wc -l || true)
+        if [ "$unwrap_count" -gt 5 ]; then
+          echo "❌ Found $unwrap_count instances of .unwrap(). Consider using proper error handling."
+          grep -r --include="*.rs" '\.unwrap()' src/ | head -10
+          exit 1
+        fi
+        echo "✅ Unwrap usage is reasonable ($unwrap_count instances)"
+
+  security-audit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+    - name: Install cargo-audit
+      run: cargo install cargo-audit
+    - name: Run security audit
+      run: cargo audit
+
+  performance-check:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+    - name: Install cargo-bloat
+      run: cargo install cargo-bloat
+    - name: Check binary size
+      run: |
+        cargo build --release
+        cargo bloat --release --crates
