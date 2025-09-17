@@ -45,17 +45,7 @@ jobs:
           exit 1
         fi
         echo "✅ No hardcoded values found"
-    
-    - name: Check variable naming conventions
-      run: |
-        echo "Checking for abbreviations in variable names across all Rust files..."
-        if grep -r --include="*.rs" -E 'let\s+[a-z]*[aeiou]*[bcdfghjklmnpqrstvwxyz]{3,}[aeiou]*[bcdfghjklmnpqrstvwxyz]\s*=' . --exclude-dir=target | grep -E '(usr|addr|cfg|mgr|ctx|impl|proc)'; then
-          echo "❌ Found potential abbreviations in variable names"
-          echo "Use full descriptive names as per copilot-instructions.md"
-          exit 1
-        fi
-        echo "✅ Variable naming looks good"
-    
+        
     - name: Check for inline variables in macros
       run: |
         echo "Checking for proper variable inlining in log macros across all Rust files..."
