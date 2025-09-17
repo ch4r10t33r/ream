@@ -11,7 +11,6 @@
 ## Code Quality and Style Guidelines
 
 ### Variable Naming and Declaration
-- **No abbreviations**: Use descriptive, full names for variables (e.g., `user_account` not `usr_acc`)
 - **Lazy declaration**: Only define variables when you need them, not at the beginning of functions
 - **Meaningful names**: Variable names should clearly describe their purpose and content
 - **Snake_case**: Use snake_case for variables, functions, and modules
