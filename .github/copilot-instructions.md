@@ -124,7 +124,6 @@
 - **Clippy**: Always run `cargo clippy` and address warnings
 - **Rustfmt**: Use `cargo fmt` for consistent code formatting
 - **Rust analyzer**: Configure IDE with rust-analyzer for better development experience
-- **Pre-commit hooks**: Set up hooks for formatting and linting
 - **CI/CD**: Automate testing, linting, and security audits
 
 Remember: Write code that is readable, maintainable, and follows Rust idioms. When in doubt, favor explicitness over cleverness.
