@@ -10,7 +10,10 @@ use std::{
 use alloy_primitives::hex;
 use clap::Parser;
 use libp2p_identity::secp256k1;
-use rayon::prelude::ParallelIterator;
+use rayon::{
+    iter::{IndexedParallelIterator, IntoParallelRefIterator},
+    prelude::ParallelIterator,
+};
 use ream::cli::{
     Cli, Commands,
     account_manager::AccountManagerConfig,

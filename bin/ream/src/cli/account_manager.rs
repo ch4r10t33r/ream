@@ -24,7 +24,7 @@ pub struct AccountManagerConfig {
     pub chunk_size: u32,
 
     /// Seed phrase for key generation
-    #[arg(short, long, conflicts_with = "import_keystore")]
+    #[arg(short, long)]
     pub seed_phrase: Option<String>,
 
     /// Optional BIP39 passphrase used with the seed phrase
@@ -42,7 +42,6 @@ pub struct AccountManagerConfig {
     /// Path for keystore directory
     #[arg(long, default_value = DEFAULT_KEYSTORE_PATH)]
     pub path: String,
-
 }
 
 impl Default for AccountManagerConfig {
@@ -56,7 +55,6 @@ impl Default for AccountManagerConfig {
             activation_epoch: DEFAULT_ACTIVATION_EPOCH,
             num_active_epochs: DEFAULT_NUM_ACTIVE_EPOCHS,
             path: DEFAULT_KEYSTORE_PATH.to_string(),
-            import_keystore: None,
         }
     }
 }
@@ -87,11 +85,9 @@ impl AccountManagerConfig {
             let entropy: [u8; 32] = rand::random();
             let mnemonic = Mnemonic::from_entropy(&entropy).expect("Failed to generate mnemonic");
             let phrase = mnemonic.words().collect::<Vec<_>>().join(" ");
-info!("{}", "=".repeat(89));
+            info!("{}", "=".repeat(89));
             info!("Generated new seed phrase (KEEP SAFE): {phrase}");
-            info!(
-                "========================================================================================="
-            );
+            info!("{}", "=".repeat(89));
             phrase
         }
     }
