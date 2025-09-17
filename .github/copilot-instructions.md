@@ -1,5 +1,13 @@
 # GitHub Copilot Instructions for Rust Development
 
+**Scope**: These guidelines apply to ALL Rust files (*.rs) in this repository, including:
+- `src/` - Main source code
+- `bin/` - Binary crates
+- `crates/` - Workspace crates
+- `examples/` - Example code
+- `tests/` - Integration tests
+- `benches/` - Benchmarks
+
 ## Code Quality and Style Guidelines
 
 ### Variable Naming and Declaration

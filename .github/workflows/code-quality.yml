@@ -39,10 +39,17 @@ jobs:
     - name: Run tests
       run: cargo test --all-features --verbose
       
+    - name: Validate copilot-instructions.md compliance
+      run: |
+        echo "🤖 Enforcing GitHub Copilot Instructions across ALL Rust files"
+        echo "📋 Reference: .github/copilot-instructions.md"
+        echo "🔍 Scanning: src/, bin/, crates/, examples/, tests/, benches/"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      
     - name: Check for hardcoded values
       run: |
-        echo "Checking for hardcoded magic numbers..."
-        if grep -r --include="*.rs" -E '\b[0-9]{3,}\b' src/ && ! grep -r --include="*.rs" 'const.*=' src/; then
+        echo "Checking for hardcoded magic numbers in all Rust files..."
+        if grep -r --include="*.rs" -E '\b[0-9]{3,}\b' . --exclude-dir=target && ! grep -r --include="*.rs" 'const.*=' . --exclude-dir=target; then
           echo "❌ Found potential magic numbers. Use constants instead."
           exit 1
         fi
@@ -50,33 +57,59 @@ jobs:
     
     - name: Check variable naming conventions
       run: |
-        echo "Checking for abbreviations in variable names..."
-        if grep -r --include="*.rs" -E 'let\s+[a-z]*[aeiou]*[bcdfghjklmnpqrstvwxyz]{3,}[aeiou]*[bcdfghjklmnpqrstvwxyz]\s*=' src/ | grep -E '(usr|addr|cfg|mgr|ctx|impl|proc)'; then
+        echo "Checking for abbreviations in variable names across all Rust files..."
+        if grep -r --include="*.rs" -E 'let\s+[a-z]*[aeiou]*[bcdfghjklmnpqrstvwxyz]{3,}[aeiou]*[bcdfghjklmnpqrstvwxyz]\s*=' . --exclude-dir=target | grep -E '(usr|addr|cfg|mgr|ctx|impl|proc)'; then
           echo "❌ Found potential abbreviations in variable names"
+          echo "Use full descriptive names as per copilot-instructions.md"
           exit 1
         fi
         echo "✅ Variable naming looks good"
     
     - name: Check for inline variables in macros
       run: |
-        echo "Checking for proper variable inlining in log macros..."
-        if grep -r --include="*.rs" -E '(info!|debug!|warn!|error!|println!)\s*\([^)]*\{\}' src/; then
+        echo "Checking for proper variable inlining in log macros across all Rust files..."
+        if grep -r --include="*.rs" -E '(info!|debug!|warn!|error!|println!)\s*\([^)]*\{\}' . --exclude-dir=target; then
           echo "❌ Found {} placeholders in log macros. Use inline variables instead."
           echo "Example: info!(\"User {user_id} status {status}\") instead of info!(\"User {} status {}\", user_id, status)"
+          echo "See copilot-instructions.md for logging best practices"
           exit 1
         fi
         echo "✅ Log macro usage looks good"
     
     - name: Check for unwrap() usage
       run: |
-        echo "Checking for unwrap() usage..."
-        unwrap_count=$(grep -r --include="*.rs" '\.unwrap()' src/ | wc -l || true)
-        if [ "$unwrap_count" -gt 5 ]; then
+        echo "Checking for unwrap() usage across all Rust files..."
+        unwrap_count=$(grep -r --include="*.rs" '\.unwrap()' . --exclude-dir=target | wc -l || true)
+        if [ "$unwrap_count" -gt 10 ]; then
           echo "❌ Found $unwrap_count instances of .unwrap(). Consider using proper error handling."
-          grep -r --include="*.rs" '\.unwrap()' src/ | head -10
+          echo "See copilot-instructions.md for error handling best practices"
+          grep -r --include="*.rs" '\.unwrap()' . --exclude-dir=target | head -10
           exit 1
         fi
         echo "✅ Unwrap usage is reasonable ($unwrap_count instances)"
+    
+    - name: Check for lazy variable declaration
+      run: |
+        echo "Checking for early variable declarations..."
+        # Look for functions with multiple let statements at the beginning
+        if grep -r --include="*.rs" -A 10 'fn.*{' . --exclude-dir=target | grep -E 'let.*=.*;\s*$' | grep -E 'let.*=.*;\s*let.*=.*;\s*let.*=.*;'; then
+          echo "❌ Found potential early variable declarations. Declare variables when needed."
+          echo "See copilot-instructions.md for lazy declaration guidelines"
+          exit 1
+        fi
+        echo "✅ Variable declarations look appropriately lazy"
+    
+    - name: Check for TODO/FIXME comments
+      run: |
+        echo "Checking for TODO/FIXME comments..."
+        todo_count=$(grep -r --include="*.rs" -E '(TODO|FIXME|XXX|HACK)' . --exclude-dir=target | wc -l || true)
+        if [ "$todo_count" -gt 0 ]; then
+          echo "⚠️ Found $todo_count TODO/FIXME comments:"
+          grep -r --include="*.rs" -E '(TODO|FIXME|XXX|HACK)' . --exclude-dir=target | head -5
+          echo "Consider addressing these before merging"
+        else
+          echo "✅ No TODO/FIXME comments found"
+        fi
 
   security-audit:
     runs-on: ubuntu-latest
