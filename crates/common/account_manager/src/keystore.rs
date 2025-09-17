@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::anyhow;
 use chrono::{DateTime, Utc};
 use hex;
 use rand;
@@ -31,7 +31,7 @@ impl std::fmt::Display for KdfFunction {
 impl std::str::FromStr for KdfFunction {
     type Err = anyhow::Error;
 
-    fn from_str(s: &str) -> Result<Self> {
+    fn from_str(s: &str) -> anyhow::Result<Self> {
         match s {
             "argon2id" => Ok(KdfFunction::Argon2Id),
             _ => Err(anyhow!("Invalid KDF function: {}", s)),
@@ -67,7 +67,7 @@ impl std::fmt::Display for CipherFunction {
 impl std::str::FromStr for CipherFunction {
     type Err = anyhow::Error;
 
-    fn from_str(s: &str) -> Result<Self> {
+    fn from_str(s: &str) -> anyhow::Result<Self> {
         match s {
             "aes-256-gcm" => Ok(CipherFunction::Aes256Gcm),
             _ => Err(anyhow!("Invalid cipher function: {}", s)),
@@ -103,7 +103,7 @@ impl std::fmt::Display for KeyTypeFunction {
 impl std::str::FromStr for KeyTypeFunction {
     type Err = anyhow::Error;
 
-    fn from_str(s: &str) -> Result<Self> {
+    fn from_str(s: &str) -> anyhow::Result<Self> {
         match s {
             "xmss-poisedon2-ots-seed" => Ok(KeyTypeFunction::XmssPoseidon2OtsSeed),
             _ => Err(anyhow!("Invalid key type function: {}", s)),
@@ -286,7 +286,7 @@ impl Keystore {
     }
 
     /// Validate the keystore structure
-    pub fn validate(&self) -> Result<()> {
+    pub fn validate(&self) -> anyhow::Result<()> {
         // Validate required constants for external data
         if self.version != KEYSTORE_VERSION {
             return Err(anyhow!("Version must be {}", KEYSTORE_VERSION));
