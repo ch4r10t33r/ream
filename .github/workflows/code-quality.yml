@@ -49,9 +49,13 @@ jobs:
     - name: Check for inline variables in macros
       run: |
         echo "Checking for proper variable inlining in log macros across all Rust files..."
-        if grep -r --include="*.rs" -E '(info!|debug!|warn!|error!|println!)\s*\([^)]*\{\}' . --exclude-dir=target; then
+        violations=$(grep -r --include="*.rs" -E '(info!|debug!|warn!|error!|println!)\s*\([^)]*\{\}' . --exclude-dir=target | \
+          grep -v -E '\w+\.\w+\(\)' || true)
+        if [ -n "$violations" ]; then
           echo "❌ Found {} placeholders in log macros. Use inline variables instead."
+          echo "$violations"
           echo "Example: info!(\"User {user_id} status {status}\") instead of info!(\"User {} status {}\", user_id, status)"
+          echo "Note: Function calls like variable.method() are allowed as exceptions"
           echo "See copilot-instructions.md for logging best practices"
           exit 1
         fi
