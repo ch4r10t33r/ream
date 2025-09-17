@@ -87,9 +87,7 @@ impl AccountManagerConfig {
             let entropy: [u8; 32] = rand::random();
             let mnemonic = Mnemonic::from_entropy(&entropy).expect("Failed to generate mnemonic");
             let phrase = mnemonic.words().collect::<Vec<_>>().join(" ");
-            info!(
-                "========================================================================================="
-            );
+info!("{}", "=".repeat(89));
             info!("Generated new seed phrase (KEEP SAFE): {phrase}");
             info!(
                 "========================================================================================="
