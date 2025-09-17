@@ -406,7 +406,7 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
     let keystore_dir = Path::new(&config.path);
     if !keystore_dir.exists() {
         fs::create_dir_all(keystore_dir).expect("Failed to create keystore directory");
-        info!("Created keystore directory: {}", keystore_path.display());
+        info!("Created keystore directory: {}", keystore_dir.display());
     }
 
     // Measure key generation time

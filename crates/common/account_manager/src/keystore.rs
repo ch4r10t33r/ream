@@ -259,8 +259,6 @@ impl Keystore {
         description: Option<String>,
         path: Option<String>,
     ) -> Self {
-        let uuid = Uuid::new_v4();
-
         // Generate random salt for KDF (32 bytes)
         let salt = hex::encode(rand::random::<[u8; 32]>());
 
@@ -273,19 +271,13 @@ impl Keystore {
         // Store the seed phrase as encrypted data (hex encoded)
         let ciphertext = hex::encode(seed_phrase.as_bytes());
 
-        let kdf = KdfParams::new_full(65536, 4, 2, salt);
-        let cipher = CipherParams::new(nonce, tag, ciphertext);
-        let crypto = CryptoParams { kdf, cipher };
+        let crypto = CryptoParams {
+            kdf: KdfParams::new_full(65536, 4, 2, salt),
+            cipher: CipherParams::new(nonce, tag, ciphertext),
+        };
         let keytype = KeyType::new(lifetime, activation_epoch);
 
-        let mut keystore = Self::new(
-            CryptoParams {
-                kdf: KdfParams::new_full(65536, 4, 2, salt),
-                cipher: CipherParams::new(nonce, tag, ciphertext),
-            },
-            KeyType::new(lifetime, activation_epoch),
-            Uuid::new_v4(),
-        );
+        let mut keystore = Self::new(crypto, keytype, Uuid::new_v4());
         keystore.description = description;
         keystore.path = path;
 
