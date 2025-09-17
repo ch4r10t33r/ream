@@ -44,7 +44,7 @@ pub fn generate_keys(
     // Display public key contents
     match serde_json::to_string_pretty(&public_key.inner) {
         Ok(json) => info!("Public key contents: {json}"),
-        Err(e) => info!("Public key generated successfully (could not serialize) due to {e}"),
+        Err(err) => info!("Public key generated successfully (could not serialize) due to {err}"),
     }
 
     (public_key, private_key)
