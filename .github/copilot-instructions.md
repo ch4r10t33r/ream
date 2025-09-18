@@ -8,7 +8,7 @@
 - `tests/` - Integration tests
 - `benches/` - Benchmarks
 
-## Code Quality and Style Guidelines
+## Ream Code Standards & Expectations
 
 ### Variable Naming and Declaration
 - **Lazy declaration**: Only define variables when you need them, not at the beginning of functions
@@ -17,7 +17,7 @@
 - **PascalCase**: Use PascalCase for types, structs, enums, and traits
 
 ### Logging and Output Best Practices
-- **Inline variables in macros**: Always inline variables within `info!`, `debug!`, `warn!`, `error!`, and `println!` macros
+- **Inline variables in macros**: Inline variables directly in `info!`, `debug!`, `warn!`, `error!`,`println!` and similar macros wherever possible.
   ```rust
   // ✅ Good
   info!("Processing user {user_id} with status {status}");
@@ -29,8 +29,7 @@
 - **Appropriate log levels**: Use the correct log level for different types of messages
 
 ### Error Handling
-- **Prefer `Result<T, E>`**: Use Result types for error handling instead of panicking
-- **Use `anyhow`** for all errors.
+- **Prefer anyhow::Result`**: Prefer using anyhow::Result instead of Result<T, E>.
 - **Propagate errors**: Use `?` operator to propagate errors up the call stack
 - **Meaningful error messages**: Provide context about what operation failed and why
 - **Avoid unwrap()**: Only use `unwrap()` when you can prove the operation cannot fail
@@ -79,7 +78,7 @@
 - **Minimal dependencies**: Only add dependencies you actually need
 - **Version pinning**: Use specific versions for production applications
 - **Feature flags**: Use cargo features to make dependencies optional
-- **Workspace organization**: Use cargo workspaces for multi-crate projects
+- **Workspace organization**: Only add a crate dependency to the workspace’s main Cargo.toml if it is required by more than one crate.
 
 ### Security Best Practices
 - **Input validation**: Validate all external input
