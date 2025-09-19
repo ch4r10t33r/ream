@@ -10,10 +10,6 @@ use std::{
 use alloy_primitives::hex;
 use clap::Parser;
 use libp2p_identity::secp256k1;
-use rayon::{
-    iter::{IndexedParallelIterator, IntoParallelRefIterator},
-    prelude::ParallelIterator,
-};
 use ream::cli::{
     Cli, Commands,
     account_manager::AccountManagerConfig,
@@ -415,39 +411,34 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
     // Measure key generation time
     let start_time = Instant::now();
 
-    // Parallelize key generation for each message type
-    MessageType::iter()
-        .collect::<Vec<_>>()
-        .par_iter()
-        .enumerate()
-        .for_each(|(index, &message_type)| {
-            let (_public_key, _private_key) = ream_account_manager::generate_keys(
-                &seed_phrase,
-                index as u32,
-                config.activation_epoch,
-                config.num_active_epochs,
-                config.passphrase.as_deref().unwrap_or(""),
-            );
+    // Generate keys sequentially for each message type
+    for (index, message_type) in MessageType::iter().enumerate() {
+        let (_public_key, _private_key) = ream_account_manager::generate_keys(
+            &seed_phrase,
+            index as u32,
+            config.activation_epoch,
+            config.num_active_epochs,
+            config.passphrase.as_deref().unwrap_or(""),
+        );
 
-            // Create keystore file using Keystore
-            // TODO: This is a placeholder solution to create a keystore file.
-            let keystore = Keystore::from_seed_phrase(
-                &seed_phrase,
-                config.lifetime,
-                config.activation_epoch,
-                Some(format!("Ream validator keystore for {}", message_type)),
-                Some(format!("m/44'/60'/0'/0/{index}")),
-            );
+        // Create keystore file using Keystore
+        let keystore = Keystore::from_seed_phrase(
+            &seed_phrase,
+            config.lifetime,
+            config.activation_epoch,
+            Some(format!("Ream validator keystore for {message_type}")),
+            Some(format!("m/44'/60'/0'/0/{index}")),
+        );
 
-            // Write keystore to file with enum name
-            let filename = message_type.to_string();
-            let keystore_file_path = keystore_dir.join(filename);
-            let keystore_json = keystore.to_json().expect("Failed to serialize keystore");
+        // Write keystore to file with enum name
+        let filename = message_type.to_string();
+        let keystore_file_path = keystore_dir.join(filename);
+        let keystore_json = keystore.to_json().expect("Failed to serialize keystore");
 
-            fs::write(&keystore_file_path, keystore_json).expect("Failed to write keystore file");
+        fs::write(&keystore_file_path, keystore_json).expect("Failed to write keystore file");
 
-            info!("Keystore written to path: {}", keystore_file_path.display());
-        });
+        info!("Keystore written to path: {}", keystore_file_path.display());
+    }
     let duration = start_time.elapsed();
     info!("Key generation complete, took {:?}", duration);
 
