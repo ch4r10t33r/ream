@@ -7,7 +7,6 @@ const MIN_CHUNK_SIZE: u32 = 4;
 const MIN_LIFETIME: u32 = 18;
 const DEFAULT_ACTIVATION_EPOCH: u32 = 0;
 const DEFAULT_NUM_ACTIVE_EPOCHS: u32 = 1 << 18;
-const DEFAULT_KEYSTORE_PATH: &str = "./.keystore/";
 
 #[derive(Debug, Parser)]
 pub struct AccountManagerConfig {
@@ -39,9 +38,9 @@ pub struct AccountManagerConfig {
     #[arg(long, default_value_t = DEFAULT_NUM_ACTIVE_EPOCHS)]
     pub num_active_epochs: u32,
 
-    /// Path for keystore directory
-    #[arg(long, default_value = DEFAULT_KEYSTORE_PATH)]
-    pub path: String,
+    /// Path for keystore directory (relative to data-dir if not absolute)
+    #[arg(long)]
+    pub keystore_path: Option<String>,
 }
 
 impl Default for AccountManagerConfig {
@@ -54,7 +53,7 @@ impl Default for AccountManagerConfig {
             passphrase: None,
             activation_epoch: DEFAULT_ACTIVATION_EPOCH,
             num_active_epochs: DEFAULT_NUM_ACTIVE_EPOCHS,
-            path: DEFAULT_KEYSTORE_PATH.to_string(),
+            keystore_path: None,
         }
     }
 }

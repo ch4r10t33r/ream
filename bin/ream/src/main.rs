@@ -1,7 +1,7 @@
 use std::{
     env, fs,
     net::SocketAddr,
-    path::Path,
+    path::{Path, PathBuf},
     process,
     sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -89,7 +89,7 @@ fn main() {
         reset_db(&ream_dir).expect("Unable to delete database");
     }
 
-    let ream_db = ReamDB::new(ream_dir).expect("unable to init Ream Database");
+    let ream_db = ReamDB::new(ream_dir.clone()).expect("unable to init Ream Database");
 
     match cli.command {
         Commands::LeanNode(config) => {
@@ -102,7 +102,7 @@ fn main() {
             executor_clone.spawn(async move { run_validator_node(*config, executor).await });
         }
         Commands::AccountManager(config) => {
-            executor_clone.spawn(async move { run_account_manager(*config).await });
+            executor_clone.spawn(async move { run_account_manager(*config, ream_dir).await });
         }
         Commands::VoluntaryExit(config) => {
             executor_clone.spawn(async move { run_voluntary_exit(*config).await });
@@ -386,7 +386,7 @@ pub async fn run_validator_node(config: ValidatorNodeConfig, executor: ReamExecu
 ///
 /// This function initializes the account manager by validating the configuration,
 /// generating keys, and starting the account manager service.
-pub async fn run_account_manager(mut config: AccountManagerConfig) {
+pub async fn run_account_manager(mut config: AccountManagerConfig, ream_dir: PathBuf) {
     info!("Starting account manager...");
 
     // Validate the configuration
@@ -401,11 +401,25 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
 
     let seed_phrase = config.get_seed_phrase();
 
-    // Create keystore directory if it doesn't exist
-    let keystore_dir = Path::new(&config.path);
+    // Create keystore directory as subdirectory of data directory
+    let keystore_dir = match &config.keystore_path {
+        Some(custom_path) => {
+            let path = Path::new(custom_path);
+            if path.is_absolute() {
+                path.to_path_buf()
+            } else {
+                ream_dir.join(custom_path)
+            }
+        }
+        None => ream_dir.join("keystores"),
+    };
+
     if !keystore_dir.exists() {
-        fs::create_dir_all(keystore_dir).expect("Failed to create keystore directory");
-        info!("Created keystore directory: {}", keystore_dir.display());
+        fs::create_dir_all(&keystore_dir).expect("Failed to create keystore directory");
+        info!(
+            "Created keystore directory: {path}",
+            path = keystore_dir.display()
+        );
     }
 
     // Measure key generation time
