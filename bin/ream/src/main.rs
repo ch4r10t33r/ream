@@ -413,7 +413,7 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
 
     // Generate keys sequentially for each message type
     for (index, message_type) in MessageType::iter().enumerate() {
-        let (_public_key, _private_key) = ream_account_manager::generate_keys(
+        let (_public_key, _private_key) = ream_account_manager::generate_key_pair_with_salt(
             &seed_phrase,
             index as u32,
             config.activation_epoch,
