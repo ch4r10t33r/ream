@@ -1,3 +1,7 @@
+pub mod keystore;
+pub mod message_types;
+pub mod utils;
+
 use std::str::FromStr;
 
 use bip39::Mnemonic;
@@ -6,10 +10,6 @@ use rand_chacha::ChaCha20Rng;
 use ream_post_quantum_crypto::hashsig::{private_key::PrivateKey, public_key::PublicKey};
 use sha2::{Digest, Sha256};
 use tracing::info;
-
-pub mod keystore;
-pub mod message_types;
-pub mod utils;
 
 pub fn generate_keys(
     seed_phrase: &str,

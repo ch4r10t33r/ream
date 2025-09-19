@@ -231,16 +231,6 @@ impl Keystore {
 
         Ok(())
     }
-
-    /// Convert to JSON string
-    pub fn to_json(&self) -> Result<String, serde_json::Error> {
-        serde_json::to_string_pretty(self)
-    }
-
-    /// Create from JSON string
-    pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
-        serde_json::from_str(json)
-    }
 }
 
 impl KdfParams {
@@ -331,8 +321,8 @@ mod tests {
 
         let keystore = Keystore::new(crypto, keytype, uuid);
 
-        let json = keystore.to_json().unwrap();
-        let deserialized = Keystore::from_json(&json).unwrap();
+        let json = serde_json::to_string_pretty(&keystore).unwrap();
+        let deserialized: Keystore = serde_json::from_str(&json).unwrap();
 
         assert_eq!(keystore.version, deserialized.version);
         assert_eq!(keystore.uuid, deserialized.uuid);

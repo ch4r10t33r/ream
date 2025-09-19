@@ -5247,6 +5247,7 @@ dependencies = [
  "ream-sync",
  "ream-validator-beacon",
  "ream-validator-lean",
+ "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",

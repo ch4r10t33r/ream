@@ -433,7 +433,8 @@ pub async fn run_account_manager(mut config: AccountManagerConfig) {
         // Write keystore to file with enum name
         let filename = message_type.to_string();
         let keystore_file_path = keystore_dir.join(filename);
-        let keystore_json = keystore.to_json().expect("Failed to serialize keystore");
+        let keystore_json =
+            ::serde_json::to_string_pretty(&keystore).expect("Failed to serialize keystore");
 
         fs::write(&keystore_file_path, keystore_json).expect("Failed to write keystore file");
 
