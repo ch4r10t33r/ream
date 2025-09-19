@@ -5225,7 +5225,6 @@ dependencies = [
  "prometheus_exporter",
  "rand 0.9.2",
  "rand_chacha 0.9.0",
- "rayon",
  "ream-account-manager",
  "ream-api-types-beacon",
  "ream-api-types-common",
